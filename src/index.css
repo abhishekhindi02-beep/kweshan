@@ -1,0 +1,101 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-main: #090d16;
+    --bg-surface: #0f1626;
+    --bg-card: #131b2e;
+    --bg-card-hover: #19233c;
+    --border-subtle: #1c273e;
+    --border-glow: #2a3b5c;
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --accent-mint: #00f59b;
+    --accent-purple: #8b5cf6;
+    --accent-gold: #f59e0b;
+    --accent-red: #ef4444;
+  }
+
+  .light {
+    --bg-main: #f8fafc;
+    --bg-surface: #ffffff;
+    --bg-card: #ffffff;
+    --bg-card-hover: #f1f5f9;
+    --border-subtle: #e2e8f0;
+    --border-glow: #cbd5e1;
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --text-muted: #94a3b8;
+    --accent-mint: #059669;
+    --accent-purple: #7c3aed;
+    --accent-gold: #d97706;
+    --accent-red: #dc2626;
+  }
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-main);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #090d16;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+/* Glow effects */
+.mint-glow {
+  box-shadow: 0 0 20px rgba(0, 245, 155, 0.35);
+}
+
+.mint-glow-sm {
+  box-shadow: 0 0 10px rgba(0, 245, 155, 0.25);
+}
+
+.purple-glow {
+  box-shadow: 0 0 25px rgba(139, 92, 246, 0.35);
+}
+
+.gold-glow {
+  box-shadow: 0 0 15px rgba(245, 158, 11, 0.3);
+}
+
+/* Pulse animation */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.85); }
+}
+
+.pulse-live {
+  animation: pulse-dot 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+
+
