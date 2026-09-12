@@ -589,7 +589,7 @@ class DataStore {
   }
 
   // --- Battles & Interactive Gameplay ---
-  createBattle(opponentId, deckId = 'deck_1', subject = 'Academic Duel') {
+  createBattle(opponentId, deckId = 'deck_1', subject = 'Academic Duel', format = 'standard') {
     const challenger = this.getCurrentUser();
     const opponent = this.users.find(u => u.id === opponentId) || this.users[1];
 
@@ -598,7 +598,14 @@ class DataStore {
       deckQuestions = this.questions;
     }
     const shuffled = [...deckQuestions].sort(() => 0.5 - Math.random());
-    const selected = shuffled.slice(0, 5).map(q => q.id);
+    const selectedQuestions = shuffled.slice(0, 5);
+    const selected = selectedQuestions.map(q => q.id);
+
+    const isSuddenDeath = format === 'sudden_death';
+    const dpReward = isSuddenDeath ? 180 : 120;
+    const dpLoss = isSuddenDeath ? 60 : 40;
+    const timerSeconds = isSuddenDeath ? 10 : 15;
+    const accuracy = opponent.difficulty === 'hard' ? 82 : opponent.difficulty === 'easy' ? 58 : 72;
 
     const newBattle = {
       id: `battle_${Date.now()}`,
@@ -610,33 +617,42 @@ class DataStore {
       opponentName: opponent.name,
       opponentAvatar: opponent.avatar,
       opponentLevel: opponent.level,
-      opponentRank: opponent.tier || 'Master Duelist',
+      opponentRank: opponent.tier || opponent.rank || 'Master Duelist',
       deckId,
       subject,
+      format,
       status: 'your_turn',
-      stateLabel: 'Your Turn',
+      stateLabel: isSuddenDeath ? 'Sudden Death Stakes' : 'Your Turn',
       currentRound: 1,
       maxRounds: 5,
       userScore: 0,
       opponentScore: 0,
-      timeRemainingSeconds: 15,
-      dpReward: 120,
-      dpLoss: 40,
+      timeRemainingSeconds: timerSeconds,
+      dpReward,
+      dpLoss,
+      accuracy,
       questionIds: selected,
+      questions: selectedQuestions,
       roundHistory: [],
       createdAt: new Date().toISOString()
     };
 
     this.battles.unshift(newBattle);
 
-    this.addNotification(opponent.id, {
-      actorId: challenger.id,
-      actorName: challenger.name,
-      actorAvatar: challenger.avatar,
-      type: 'battle_challenge',
+    this.addActivity(
+      challenger.id,
+      'battle_challenge_dispatched',
+      'Challenge Dispatched',
+      `Sent ${isSuddenDeath ? 'Sudden Death' : 'Standard'} challenge to ${opponent.name} in ${subject}.`,
+      '#0df2c9',
+      'Swords'
+    );
+
+    this.addNotification(challenger.id, {
+      type: 'challenge_dispatched',
       category: 'battles',
-      title: `Duel Challenge from ${challenger.name}`,
-      message: `Challenged you to a 5-round battle in ${subject}!`,
+      title: 'Challenge Dispatched',
+      message: `Challenge sent to ${opponent.name} in ${subject}.`,
       metadata: { battleId: newBattle.id, deckId }
     });
 
@@ -877,25 +893,35 @@ class DataStore {
     this.friendRequests.splice(idx, 1);
 
     const sender = this.users.find(u => u.id === req.senderId) || {
-      id: req.senderId,
-      name: req.senderName,
-      username: req.senderName.toLowerCase().replace(/\s+/g, '_'),
-      avatar: req.senderAvatar,
-      level: req.senderLevel || 10,
-      subject: 'STEM General',
-      dp: 2000
+      id: req.senderId || `user_${Date.now()}`,
+      name: req.name || req.senderName || 'Scholar Peer',
+      username: req.username || (req.name || req.senderName || 'peer').toLowerCase().replace(/\s+/g, '_'),
+      handle: req.handle || ('@' + (req.name || req.senderName || 'peer').toLowerCase().replace(/\s+/g, '_')),
+      avatar: req.avatar || req.senderAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+      level: req.level || req.senderLevel || 10,
+      subject: req.subject || 'STEM General',
+      dp: req.dp || 2400,
+      streak: req.streak || 3,
+      winRate: req.winRate || '75%',
+      tier: req.tier || req.rank || 'Scholar'
     };
 
     const newFriend = {
       id: sender.id,
       name: sender.name,
       username: sender.username,
+      handle: sender.handle || `@${sender.username}`,
       avatar: sender.avatar,
-      level: sender.level,
+      level: sender.level || 10,
       onlineStatus: 'online',
       subject: sender.subject || 'STEM General',
       relationshipTag: 'Guild Mate',
-      dp: sender.dp || 2000
+      rank: sender.tier || sender.rank || 'Scholar',
+      dp: sender.dp || 2500,
+      streak: sender.streak || 3,
+      winRate: sender.winRate || '75%',
+      difficulty: sender.difficulty || 'medium',
+      personality: sender.personality || 'Tactical Duelist'
     };
 
     if (!this.friends.some(f => f.id === newFriend.id)) {
@@ -906,13 +932,31 @@ class DataStore {
       this.currentUserId,
       'friend_connected',
       'Study Circle Expanded',
-      `Connected with ${newFriend.name} (@${newFriend.username}).`,
+      `Connected with ${newFriend.name} (${newFriend.handle || '@' + newFriend.username}).`,
       '#8b5cf6',
       'Users'
     );
 
+    this.addNotification(this.currentUserId, {
+      type: 'friend_accepted',
+      category: 'friends',
+      title: 'Connection Accepted',
+      message: `You are now connected with ${newFriend.name}.`,
+      metadata: { friendId: newFriend.id }
+    });
+
     this.saveState();
     return { success: true, friend: newFriend };
+  }
+
+  declineFriendRequest(requestId) {
+    const idx = this.friendRequests.findIndex(r => r.id === requestId);
+    if (idx !== -1) {
+      this.friendRequests.splice(idx, 1);
+      this.saveState();
+      return true;
+    }
+    return false;
   }
 
   removeFriend(friendId) {

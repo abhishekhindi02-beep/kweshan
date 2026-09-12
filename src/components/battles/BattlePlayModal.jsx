@@ -70,7 +70,8 @@ export default function BattlePlayModal({ isOpen, onClose, battle, onComplete, b
       setOpponentCorrect(false);
       setIsGameOver(false);
       setBattleResult(null);
-      setTimeLeft(15);
+      const roundTime = activeBattle.timeRemainingSeconds || (activeBattle.format === 'sudden_death' ? 10 : 15);
+      setTimeLeft(roundTime);
     } else if (!isOpen) {
       initializedBattleIdRef.current = null;
       clearInterval(timerRef.current);
@@ -107,13 +108,15 @@ export default function BattlePlayModal({ isOpen, onClose, battle, onComplete, b
     }
 
     setOpponentAnswered(false);
-    // Opponent takes between 2.5s and 6.0s to answer
-    const delay = 2500 + Math.random() * 3500;
+    // Opponent takes between 1.5s and 3.5s to answer
+    const delay = 1500 + Math.random() * 2000;
     opponentTimerRef.current = setTimeout(() => {
       setOpponentAnswered(true);
-      // AI opponent ~70% accuracy
-      const aiAccuracy = activeBattle?.accuracy ? activeBattle.accuracy / 100 : 0.70;
-      setOpponentCorrect(Math.random() < aiAccuracy);
+      // AI opponent accuracy based on difficulty
+      const aiAcc = activeBattle?.accuracy
+        ? (activeBattle.accuracy > 1 ? activeBattle.accuracy / 100 : activeBattle.accuracy)
+        : 0.72;
+      setOpponentCorrect(Math.random() < aiAcc);
     }, delay);
 
     return () => clearTimeout(opponentTimerRef.current);
@@ -142,8 +145,10 @@ export default function BattlePlayModal({ isOpen, onClose, battle, onComplete, b
     
     // If opponent hasn't answered yet, simulate now
     if (!opponentAnswered) {
-      const aiAccuracy = activeBattle?.accuracy ? activeBattle.accuracy / 100 : 0.70;
-      newOpponentCorrect = Math.random() < aiAccuracy;
+      const aiAcc = activeBattle?.accuracy
+        ? (activeBattle.accuracy > 1 ? activeBattle.accuracy / 100 : activeBattle.accuracy)
+        : 0.72;
+      newOpponentCorrect = Math.random() < aiAcc;
       setOpponentAnswered(true);
       setOpponentCorrect(newOpponentCorrect);
     }
@@ -161,7 +166,10 @@ export default function BattlePlayModal({ isOpen, onClose, battle, onComplete, b
     setSelectedOption(-1);
     setIsRoundFinished(true);
 
-    const newOpponentCorrect = Math.random() < 0.65;
+    const aiAcc = activeBattle?.accuracy
+      ? (activeBattle.accuracy > 1 ? activeBattle.accuracy / 100 : activeBattle.accuracy)
+      : 0.65;
+    const newOpponentCorrect = Math.random() < aiAcc;
     setOpponentAnswered(true);
     setOpponentCorrect(newOpponentCorrect);
 
@@ -172,12 +180,13 @@ export default function BattlePlayModal({ isOpen, onClose, battle, onComplete, b
 
   const handleNextRound = () => {
     if (currentRound < maxRounds) {
+      const roundTime = activeBattle.timeRemainingSeconds || (activeBattle.format === 'sudden_death' ? 10 : 15);
       setCurrentRound((prev) => prev + 1);
       setSelectedOption(null);
       setIsRoundFinished(false);
       setOpponentAnswered(false);
       setOpponentCorrect(false);
-      setTimeLeft(15);
+      setTimeLeft(roundTime);
     } else {
       finalizeBattle();
     }

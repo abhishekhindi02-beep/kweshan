@@ -159,6 +159,48 @@ export const initialUsers = [
     onlineStatus: 'online',
     relationshipTag: 'Rival',
     createdAt: new Date(Date.now() - 100 * 86400000).toISOString()
+  },
+  {
+    id: 'user_9',
+    name: 'Marcus Vance',
+    username: 'marcus_v',
+    email: 'marcus@kweshun.edu',
+    avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80',
+    level: 10,
+    tier: 'ELITE CADET',
+    dp: 2480,
+    streak: 4,
+    wins: 36,
+    losses: 15,
+    totalBattles: 51,
+    score: 330,
+    subject: 'Computer Science',
+    onlineStatus: 'online',
+    relationshipTag: 'Guild',
+    difficulty: 'medium',
+    personality: 'Algorithmic Solver',
+    createdAt: new Date(Date.now() - 45 * 86400000).toISOString()
+  },
+  {
+    id: 'user_10',
+    name: 'Aria Sterling',
+    username: 'aria_s',
+    email: 'aria@kweshun.edu',
+    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
+    level: 17,
+    tier: 'GRANDMASTER CADET',
+    dp: 2920,
+    streak: 11,
+    wins: 72,
+    losses: 10,
+    totalBattles: 82,
+    score: 520,
+    subject: 'Quantum Mechanics',
+    onlineStatus: 'online',
+    relationshipTag: 'Apex Rival',
+    difficulty: 'hard',
+    personality: 'Lightning Reflexes',
+    createdAt: new Date(Date.now() - 110 * 86400000).toISOString()
   }
 ];
 
@@ -1489,11 +1531,38 @@ export const initialFriendRequests = [
   {
     id: 'freq_1',
     senderId: 'user_4',
+    name: 'Maren Gouse',
     senderName: 'Maren Gouse',
+    handle: '@maren_g',
+    username: 'maren_g',
+    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
     senderAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
+    level: 9,
     senderLevel: 9,
-    senderBio: 'Bioinformatics & Genetics researcher.',
+    rank: 'Veteran Scholar',
+    tier: 'VETERAN SCHOLAR',
+    dp: 2420,
+    message: 'Wants to connect after your recent AP Biology duel.',
+    senderBio: 'Wants to connect after your recent AP Biology duel.',
     timeAgo: '2h ago'
+  },
+  {
+    id: 'freq_2',
+    senderId: 'user_9',
+    name: 'Marcus Vance',
+    senderName: 'Marcus Vance',
+    handle: '@marcus_v',
+    username: 'marcus_v',
+    avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80',
+    senderAvatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80',
+    level: 10,
+    senderLevel: 10,
+    rank: 'Elite Cadet',
+    tier: 'ELITE CADET',
+    dp: 2480,
+    message: 'Invited you to join their CS & Algorithm study guild.',
+    senderBio: 'Invited you to join their CS & Algorithm study guild.',
+    timeAgo: '4h ago'
   }
 ];
 
@@ -1501,35 +1570,56 @@ export const initialFriends = [
   {
     id: 'user_2',
     name: 'Abram Mango',
+    handle: '@abram_m',
     username: 'abram_m',
     avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
     level: 12,
     onlineStatus: 'online',
     subject: 'AP Physics',
     relationshipTag: 'Rival',
-    dp: 2780
+    rank: 'Master Duelist',
+    tier: 'MASTER DUELIST',
+    dp: 2780,
+    streak: 5,
+    winRate: '75%',
+    difficulty: 'medium',
+    personality: 'Fast Strategist'
   },
   {
     id: 'user_3',
     name: 'Alfonso Lubin',
+    handle: '@alfonso_l',
     username: 'alfonso_l',
     avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
     level: 15,
     onlineStatus: 'online',
     subject: 'AP Calculus',
     relationshipTag: 'Guild',
-    dp: 2690
+    rank: 'Master Duelist',
+    tier: 'MASTER DUELIST',
+    dp: 2690,
+    streak: 4,
+    winRate: '75%',
+    difficulty: 'hard',
+    personality: 'Precise Analyst'
   },
   {
     id: 'user_8',
     name: 'Nadia Okonjo',
+    handle: '@nadia_o',
     username: 'nadia_o',
     avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
     level: 16,
     onlineStatus: 'online',
-    subject: 'Genetics',
+    subject: 'Genetics & Biotech',
     relationshipTag: 'Co-author',
-    dp: 2810
+    rank: 'Apex Master',
+    tier: 'APEX MASTER',
+    dp: 2810,
+    streak: 9,
+    winRate: '82%',
+    difficulty: 'hard',
+    personality: 'Tactical Scholar'
   }
 ];
 

@@ -61,9 +61,10 @@ export function GameProvider({ children }) {
   const leaderboard = dataStore.getLeaderboard('monthly');
 
   // --- Battle Actions ---
-  const startBattleWith = (opponentId, deckId = 'deck-1', subject = 'Academic Duel') => {
-    const battle = dataStore.createBattle(opponentId, deckId, subject);
+  const startBattleWith = (opponentId, deckId = 'deck_1', subject = 'Academic Duel', format = 'standard') => {
+    const battle = dataStore.createBattle(opponentId, deckId, subject, format);
     setActiveBattleId(battle.id);
+    setActiveBattleData(battle);
     if (addToast) {
       addToast({ title: 'Battle Started', message: `Round 1 ready against ${battle.opponentName}`, type: 'success' });
     }
@@ -246,7 +247,7 @@ export function GameProvider({ children }) {
   };
 
   const ignoreFriendRequest = (requestId) => {
-    dataStore.declineInvite(requestId);
+    dataStore.declineFriendRequest(requestId);
     if (addToast) addToast({ title: 'Request Dismissed', message: 'Friend invitation removed.', type: 'info' });
   };
 

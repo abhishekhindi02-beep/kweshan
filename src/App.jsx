@@ -33,11 +33,12 @@ export default function App() {
     practicingDeck, 
     setPracticingDeck,
     activeBattleId,
-    setActiveBattleId
+    setActiveBattleId,
+    activeBattleData,
+    setActiveBattleData
   } = useGame();
 
   // Global Modals state
-  const [activeBattleData, setActiveBattleData] = useState(null);
   const [isLightningOpen, setIsLightningOpen] = useState(false);
   const [isQuickMatchOpen, setIsQuickMatchOpen] = useState(false);
   const [battleResultData, setBattleResultData] = useState(null);
@@ -59,7 +60,7 @@ export default function App() {
 
     const matchedDeck = decks.find((d) => d.id === deckId) || decks[0];
 
-    setActiveBattleData({
+    const newBattle = {
       id: battle?.id || `btl_${Date.now()}`,
       deckId: matchedDeck ? matchedDeck.id : 'deck_1',
       deckName: matchedDeck ? matchedDeck.title : 'Academic Duel',
@@ -69,10 +70,14 @@ export default function App() {
       opponentRank: battle?.opponentRank || 'Master Duelist',
       opponentLevel: battle?.opponentLevel || 12,
       accuracy: battle?.accuracy || 70,
-      dpReward: 120,
-      dpLoss: 40,
+      dpReward: battle?.dpReward || 120,
+      dpLoss: battle?.dpLoss || 40,
+      timeRemainingSeconds: battle?.timeRemainingSeconds || 15,
       questions: battleQuestions
-    });
+    };
+
+    setActiveBattleId(newBattle.id);
+    setActiveBattleData(newBattle);
   };
 
   const handleBattleComplete = (result) => {
@@ -176,7 +181,10 @@ export default function App() {
 
         <BattlePlayModal
           isOpen={Boolean(activeBattleData)}
-          onClose={() => setActiveBattleData(null)}
+          onClose={() => {
+            setActiveBattleData(null);
+            setActiveBattleId(null);
+          }}
           battle={activeBattleData}
           onComplete={handleBattleComplete}
         />

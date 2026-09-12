@@ -10,28 +10,54 @@ export default function ChallengeModal({ isOpen, onClose, targetUser, initialOpp
 
   const [selectedOpponentId, setSelectedOpponentId] = useState('user_2');
   const [selectedDeckId, setSelectedDeckId] = useState('deck_1');
-  const [format, setFormat] = useState('standard'); // 'standard' (5 rounds), 'sudden_death' (3 rounds)
+  const [format, setFormat] = useState('standard'); // 'standard' (5 rounds, 15s), 'sudden_death' (5 rounds, 10s)
   const [searchFilter, setSearchFilter] = useState('');
+  const [isDispatching, setIsDispatching] = useState(false);
+  const [validationError, setValidationError] = useState('');
 
   useEffect(() => {
     if (isOpen) {
       const defaultOpponent = targetUser?.id || initialOpponentId || friends[0]?.id || friends[0]?.userId || allUsers[1]?.id || 'user_2';
       setSelectedOpponentId(defaultOpponent);
       setSelectedDeckId(decks[0]?.id || 'deck_1');
+      setFormat('standard');
       setSearchFilter('');
+      setIsDispatching(false);
+      setValidationError('');
     }
   }, [isOpen, targetUser, initialOpponentId, friends, allUsers, decks]);
 
   if (!isOpen) return null;
 
   const selectableUsers = (allUsers || []).filter((u) =>
-    u.name?.toLowerCase().includes(searchFilter.toLowerCase())
+    u.name?.toLowerCase().includes(searchFilter.toLowerCase()) ||
+    u.username?.toLowerCase().includes(searchFilter.toLowerCase())
   );
 
   const handleSendChallenge = () => {
+    setValidationError('');
+    if (!selectedOpponentId) {
+      setValidationError('Please select an opponent to challenge.');
+      return;
+    }
+    if (!selectedDeckId) {
+      setValidationError('Please select an academic deck/arena.');
+      return;
+    }
+    if (!format) {
+      setValidationError('Please choose your battle stakes.');
+      return;
+    }
+
+    setIsDispatching(true);
+
     const deck = decks.find((d) => d.id === selectedDeckId) || decks[0];
-    startBattleWith(selectedOpponentId, selectedDeckId, deck ? deck.title : 'Academic Duel');
-    onClose();
+    
+    setTimeout(() => {
+      startBattleWith(selectedOpponentId, selectedDeckId, deck ? deck.title : 'Academic Duel', format);
+      setIsDispatching(false);
+      onClose();
+    }, 400);
   };
 
   return (
@@ -138,20 +164,29 @@ export default function ChallengeModal({ isOpen, onClose, targetUser, initialOpp
           </div>
         </div>
 
+        {/* Validation Error */}
+        {validationError && (
+          <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-semibold">
+            {validationError}
+          </div>
+        )}
+
         {/* Buttons */}
         <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#1c273e]">
           <button
             onClick={onClose}
-            className="px-4 py-2.5 rounded-xl border border-[#1f2d47] text-[#94a3b8] hover:text-white hover:bg-[#131b2e] text-xs font-semibold cursor-pointer"
+            disabled={isDispatching}
+            className="px-4 py-2.5 rounded-xl border border-[#1f2d47] text-[#94a3b8] hover:text-white hover:bg-[#131b2e] text-xs font-semibold cursor-pointer disabled:opacity-50"
           >
             Cancel
           </button>
           <button
             onClick={handleSendChallenge}
-            className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#0df2c9] hover:bg-[#00e1ba] text-slate-950 font-black text-xs sm:text-sm active:scale-95 transition-all shadow-md shadow-[#0df2c9]/20 cursor-pointer"
+            disabled={isDispatching}
+            className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#0df2c9] hover:bg-[#00e1ba] text-slate-950 font-black text-xs sm:text-sm active:scale-95 transition-all shadow-md shadow-[#0df2c9]/20 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
           >
-            <Swords className="w-4 h-4" />
-            <span>Dispatch Challenge</span>
+            <Swords className={`w-4 h-4 ${isDispatching ? 'animate-spin' : ''}`} />
+            <span>{isDispatching ? 'Dispatching Challenge...' : 'Dispatch Challenge'}</span>
           </button>
         </div>
       </div>
