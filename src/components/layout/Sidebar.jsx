@@ -16,6 +16,7 @@ import {
   Menu,
   X
 } from 'lucide-react';
+import Avatar from '../common/Avatar';
 import { useAuth } from '../../context/AuthContext';
 import { useGame } from '../../context/GameContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -145,12 +146,14 @@ export default function Sidebar({ isMobileOpen, onCloseMobile }) {
               className="flex items-center gap-3 min-w-0 flex-1 group"
             >
               <div className="relative flex-shrink-0">
-                <img
+                <Avatar
                   src={effectiveUser.avatar}
-                  alt={effectiveUser.name}
-                  className="w-9 h-9 rounded-full object-cover border border-[#2a3b5c] group-hover:border-[#0df2c9] transition-colors"
+                  name={effectiveUser.name}
+                  size="sm"
+                  className="group-hover:border-[#0df2c9] transition-colors"
+                  showStatus={true}
+                  status="online"
                 />
-                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-[#0df2c9] border-2 border-[#131b2e]" />
               </div>
               <div className="min-w-0">
                 <div className="text-xs font-bold text-white truncate group-hover:text-[#0df2c9] transition-colors">

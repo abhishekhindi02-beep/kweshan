@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Swords, Zap, Search, ShieldCheck, Trophy, Sparkles, UserCheck, Flame, Loader2 } from 'lucide-react';
+import { Swords, Zap, Loader2, Sparkles, UserCheck, Flame, Trophy, Award } from 'lucide-react';
 import Modal from '../common/Modal';
 import Badge from '../common/Badge';
+import Avatar from '../common/Avatar';
 import { useAuth } from '../../context/AuthContext';
 import { useGame } from '../../context/GameContext';
 import dataStore from '../../services/dataStore';
@@ -180,10 +181,11 @@ export default function QuickMatchModal({ isOpen, onClose, onLaunchBattle }) {
               <div className="absolute inset-0 rounded-full border-2 border-[#0df2c9]/20 animate-ping" />
               <div className="absolute inset-2 rounded-full border border-[#0df2c9]/40 animate-pulse" />
               <div className="w-24 h-24 rounded-full bg-[#111927] border-2 border-[#0df2c9] flex items-center justify-center overflow-hidden shadow-lg shadow-[#0df2c9]/20">
-                <img
+                <Avatar
                   src={currentScanned.avatar}
-                  alt={currentScanned.name}
-                  className="w-full h-full object-cover transition-all duration-200"
+                  name={currentScanned.name}
+                  size="xl"
+                  border={false}
                 />
               </div>
             </div>
@@ -197,7 +199,7 @@ export default function QuickMatchModal({ isOpen, onClose, onLaunchBattle }) {
                 Scanning for peers in STEM Divisions
               </h3>
               <p className="text-xs text-slate-400">
-                Filtering by Distinction Rank ({effectiveUser?.tier || 'Cadet'}).
+                Filtering by Distinction Rank ({effectiveUser?.tier || 'Scholar'}).
               </p>
             </div>
 
@@ -224,10 +226,11 @@ export default function QuickMatchModal({ isOpen, onClose, onLaunchBattle }) {
               <div className="flex items-center justify-center gap-6">
                 {/* User */}
                 <div className="flex flex-col items-center">
-                  <img
-                    src={effectiveUser?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
-                    alt={effectiveUser?.name}
-                    className="w-16 h-16 rounded-2xl object-cover border-2 border-[#0df2c9] shadow-md shadow-[#0df2c9]/20"
+                  <Avatar
+                    src={effectiveUser?.avatar}
+                    name={effectiveUser?.name}
+                    size="xl"
+                    className="border-2 border-[#0df2c9] shadow-md shadow-[#0df2c9]/20"
                   />
                   <span className="text-xs font-bold text-white mt-1.5 max-w-[90px] truncate">{effectiveUser?.name}</span>
                   <span className="text-[10px] text-slate-400 font-mono">You</span>
@@ -239,10 +242,11 @@ export default function QuickMatchModal({ isOpen, onClose, onLaunchBattle }) {
 
                 {/* Opponent */}
                 <div className="flex flex-col items-center">
-                  <img
+                  <Avatar
                     src={selectedOpponent.avatar}
-                    alt={selectedOpponent.name}
-                    className="w-16 h-16 rounded-2xl object-cover border-2 border-[#8b5cf6] shadow-md shadow-[#8b5cf6]/20"
+                    name={selectedOpponent.name}
+                    size="xl"
+                    className="border-2 border-[#8b5cf6] shadow-md shadow-[#8b5cf6]/20"
                   />
                   <span className="text-xs font-bold text-white mt-1.5 max-w-[90px] truncate">{selectedOpponent.name}</span>
                   <span className="text-[10px] text-[#8b5cf6] font-mono">Lvl {selectedOpponent.level}</span>

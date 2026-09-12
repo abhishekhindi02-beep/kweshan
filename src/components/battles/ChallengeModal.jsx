@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Swords, Search, User, Zap, BookOpen } from 'lucide-react';
 import Modal from '../common/Modal';
+import Avatar from '../common/Avatar';
 import { useGame } from '../../context/GameContext';
 import { useAuth } from '../../context/AuthContext';
 
@@ -84,28 +85,28 @@ export default function ChallengeModal({ isOpen, onClose, targetUser, initialOpp
               className="w-full pl-9 pr-3 py-1.5 bg-[#090d16] border border-[#1c273e] focus:border-[#0df2c9]/50 rounded-xl text-xs text-white placeholder-[#64748b] focus:outline-none"
             />
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-36 overflow-y-auto p-1">
-            {selectableUsers.slice(0, 6).map((u) => {
-              const isSelected = selectedOpponentId === u.id;
-              return (
-                <button
-                  key={u.id}
-                  onClick={() => setSelectedOpponentId(u.id)}
-                  className={`flex items-center gap-2 p-2 rounded-xl border text-left transition-all cursor-pointer ${
-                    isSelected
-                      ? 'bg-[#0df2c9]/15 border-[#0df2c9] text-white'
-                      : 'bg-[#101726] border-[#1c273e] text-[#94a3b8] hover:text-white hover:border-[#2a3b5c]'
-                  }`}
-                >
-                  <img src={u.avatar} alt={u.name} className="w-6 h-6 rounded-full object-cover" />
-                  <div className="min-w-0">
-                    <div className="text-xs font-bold truncate">{u.name}</div>
-                    <div className="text-[10px] font-mono text-[#64748b]">Lvl {u.level || 1}</div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-36 overflow-y-auto p-1">
+              {selectableUsers.slice(0, 6).map((u) => {
+                const isSelected = selectedOpponentId === u.id;
+                return (
+                  <button
+                    key={u.id}
+                    onClick={() => setSelectedOpponentId(u.id)}
+                    className={`flex items-center gap-2 p-2 rounded-xl border text-left transition-all cursor-pointer ${
+                      isSelected
+                        ? 'bg-[#0df2c9]/15 border-[#0df2c9] text-white'
+                        : 'bg-[#101726] border-[#1c273e] text-[#94a3b8] hover:text-white hover:border-[#2a3b5c]'
+                    }`}
+                  >
+                    <Avatar src={u.avatar} name={u.name} size="xs" />
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold truncate">{u.name}</div>
+                      <div className="text-[10px] text-[#64748b] font-mono truncate">{u.tier || u.rank || 'Scholar'}</div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
         </div>
 
         {/* Step 2: Subject Deck */}

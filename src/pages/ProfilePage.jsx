@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import Badge from '../components/common/Badge';
 import ProgressBar from '../components/common/ProgressBar';
+import Avatar from '../components/common/Avatar';
 import ChallengeModal from '../components/battles/ChallengeModal';
 import { useAuth } from '../context/AuthContext';
 import { useGame } from '../context/GameContext';
@@ -78,14 +79,15 @@ export default function ProfilePage() {
         <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
             <div className="relative">
-              <img
-                src={profileUser?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'}
-                alt={profileUser?.name}
-                className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border-2 border-[#0df2c9] shadow-lg shadow-[#0df2c9]/20"
+              <Avatar
+                src={profileUser?.avatar}
+                name={profileUser?.name}
+                size="xl"
+                className="border-2 border-[#0df2c9] shadow-lg shadow-[#0df2c9]/20"
               />
               <div className="absolute -bottom-2 -right-2 bg-amber-400 text-slate-950 font-black text-xs px-2 py-0.5 rounded-full flex items-center gap-0.5">
                 <Flame className="w-3.5 h-3.5 fill-slate-950" />
-                {profileUser?.streak || 7}d
+                {profileUser?.streak ?? 0}d
               </div>
             </div>
 

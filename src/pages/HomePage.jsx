@@ -7,6 +7,7 @@ import {
 import StatCard from '../components/common/StatCard';
 import ProgressBar from '../components/common/ProgressBar';
 import Badge from '../components/common/Badge';
+import Avatar from '../components/common/Avatar';
 import { useAuth } from '../context/AuthContext';
 import { useGame } from '../context/GameContext';
 
@@ -37,14 +38,15 @@ export default function HomePage({ onOpenBattle, onOpenLightning, onStartPractic
         <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="flex items-center gap-4 sm:gap-5">
             <div className="relative">
-              <img
-                src={effectiveUser?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
-                alt={effectiveUser?.name}
-                className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover border-2 border-[#0df2c9]/60 shadow-lg shadow-[#0df2c9]/20"
+              <Avatar
+                src={effectiveUser?.avatar}
+                name={effectiveUser?.name}
+                size="xl"
+                className="border-2 border-[#0df2c9]/60 shadow-lg shadow-[#0df2c9]/20"
               />
               <div className="absolute -bottom-2 -right-2 bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 font-extrabold text-[10px] px-2 py-0.5 rounded-full shadow-md flex items-center gap-0.5">
                 <Flame className="w-3 h-3 fill-slate-950" />
-                {effectiveUser?.streak || 7}d
+                {effectiveUser?.streak ?? 0}d
               </div>
             </div>
 

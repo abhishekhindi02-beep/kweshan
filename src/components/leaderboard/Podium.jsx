@@ -1,6 +1,7 @@
 import React from 'react';
 import { Crown, Trophy, Medal, Flame } from 'lucide-react';
 import Badge from '../common/Badge';
+import Avatar from '../common/Avatar';
 
 export default function Podium({ topThree = [], onChallenge }) {
   if (!Array.isArray(topThree) || topThree.length < 3) return null;
@@ -16,10 +17,11 @@ export default function Podium({ topThree = [], onChallenge }) {
           <div className="w-8 h-8 rounded-full bg-slate-400/20 text-slate-300 font-bold flex items-center justify-center border border-slate-400/40 text-xs mb-2">
             #2
           </div>
-          <img
-            src={second.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
-            alt={second.name}
-            className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover border-2 border-slate-400 shadow-lg shadow-slate-400/10"
+          <Avatar
+            src={second.avatar}
+            name={second.name}
+            size="xl"
+            className="border-2 border-slate-400 shadow-lg shadow-slate-400/10"
           />
         </div>
         <div className="text-center w-full">
@@ -43,10 +45,11 @@ export default function Podium({ topThree = [], onChallenge }) {
         <div className="relative mb-3 flex flex-col items-center">
           <Crown className="w-8 h-8 text-amber-400 animate-bounce mb-1 drop-shadow-md" />
           <div className="relative">
-            <img
-              src={first.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
-              alt={first.name}
-              className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover border-4 border-amber-400 shadow-xl shadow-amber-400/20"
+            <Avatar
+              src={first.avatar}
+              name={first.name}
+              size="2xl"
+              className="border-4 border-amber-400 shadow-xl shadow-amber-400/20"
             />
             <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 bg-amber-400 text-slate-950 font-black text-xs px-2.5 py-0.5 rounded-full shadow-md">
               #1
@@ -75,10 +78,11 @@ export default function Podium({ topThree = [], onChallenge }) {
           <div className="w-8 h-8 rounded-full bg-amber-700/30 text-amber-600 font-bold flex items-center justify-center border border-amber-600/40 text-xs mb-2">
             #3
           </div>
-          <img
-            src={third.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
-            alt={third.name}
-            className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover border-2 border-amber-600 shadow-lg shadow-amber-600/10"
+          <Avatar
+            src={third.avatar}
+            name={third.name}
+            size="xl"
+            className="border-2 border-amber-600 shadow-lg shadow-amber-700/10"
           />
         </div>
         <div className="text-center w-full">

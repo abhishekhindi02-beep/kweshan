@@ -1,6 +1,7 @@
 import React from 'react';
 import { Swords, Trophy, Flame, CheckCircle, ShieldAlert, UserMinus } from 'lucide-react';
 import Badge from '../common/Badge';
+import Avatar from '../common/Avatar';
 import { useGame } from '../../context/GameContext';
 
 export default function FriendCard({ friend, onChallenge, onRemove }) {
@@ -17,16 +18,13 @@ export default function FriendCard({ friend, onChallenge, onRemove }) {
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
           <div className="relative flex-shrink-0">
-            <img
-              src={friend.avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150'}
-              alt={friend.name}
-              className="w-12 h-12 rounded-2xl object-cover border-2 border-[#1b273a] group-hover:border-[#0df2c9] transition-colors"
-            />
-            <div
-              className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-[#111927] ${
-                isOnline ? 'bg-[#0df2c9]' : 'bg-slate-500'
-              }`}
-              title={isOnline ? 'Online' : 'Offline'}
+            <Avatar
+              src={friend.avatar}
+              name={friend.name}
+              size="lg"
+              showStatus={true}
+              status={isOnline ? 'online' : 'offline'}
+              className="group-hover:border-[#0df2c9] transition-colors"
             />
           </div>
           <div>

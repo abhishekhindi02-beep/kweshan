@@ -1,6 +1,7 @@
 import React from 'react';
 import { Flame, Swords, Award, TrendingUp } from 'lucide-react';
 import Badge from '../common/Badge';
+import Avatar from '../common/Avatar';
 
 export default function LeaderboardTable({ users = [], currentUserId, onChallenge }) {
   if (!Array.isArray(users) || users.length === 0) {
@@ -57,10 +58,10 @@ export default function LeaderboardTable({ users = [], currentUserId, onChalleng
                   {/* Scholar Profile */}
                   <td className="py-4 px-4">
                     <div className="flex items-center gap-3">
-                      <img
-                        src={u.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
-                        alt={u.name}
-                        className="w-10 h-10 rounded-full object-cover border border-[#22334d]"
+                      <Avatar
+                        src={u.avatar}
+                        name={u.name}
+                        size="md"
                       />
                       <div>
                         <div className="font-bold text-white flex items-center gap-2">

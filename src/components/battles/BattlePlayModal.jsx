@@ -3,6 +3,7 @@ import { Clock, CheckCircle2, XCircle, ArrowRight, Swords, Sparkles, BookOpen, T
 import Modal from '../common/Modal';
 import Badge from '../common/Badge';
 import ProgressBar from '../common/ProgressBar';
+import Avatar from '../common/Avatar';
 import { useGame } from '../../context/GameContext';
 import { useAuth } from '../../context/AuthContext';
 import dataStore from '../../services/dataStore';
@@ -304,10 +305,11 @@ export default function BattlePlayModal({ isOpen, onClose, battle, onComplete, b
           <div className="flex items-center justify-between p-4 rounded-2xl bg-[#0b101b] border border-[#22334d] shadow-md">
             {/* User Info */}
             <div className="flex items-center gap-3">
-              <img
-                src={effectiveUser?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
-                alt={effectiveUser?.name}
-                className="w-11 h-11 rounded-2xl object-cover border-2 border-[#0df2c9] shadow-sm"
+              <Avatar
+                src={effectiveUser?.avatar}
+                name={effectiveUser?.name}
+                size="lg"
+                className="border-2 border-[#0df2c9] shadow-sm"
               />
               <div>
                 <div className="text-xs font-bold text-white max-w-[110px] truncate">{effectiveUser?.name}</div>
@@ -331,10 +333,11 @@ export default function BattlePlayModal({ isOpen, onClose, battle, onComplete, b
                 <div className="text-xs font-bold text-white max-w-[110px] truncate">{activeBattle.opponentName}</div>
                 <div className="text-base font-black text-[#8b5cf6] font-mono">{opponentScore} PTS</div>
               </div>
-              <img
+              <Avatar
                 src={activeBattle.opponentAvatar}
-                alt={activeBattle.opponentName}
-                className="w-11 h-11 rounded-2xl object-cover border-2 border-[#8b5cf6] shadow-sm"
+                name={activeBattle.opponentName}
+                size="lg"
+                className="border-2 border-[#8b5cf6] shadow-sm"
               />
             </div>
           </div>
@@ -544,12 +547,11 @@ export default function BattlePlayModal({ isOpen, onClose, battle, onComplete, b
                       : 'bg-[#111927] border-[#1f2d47]'
                   }`}>
                     <div className="relative">
-                      <img
-                        src={effectiveUser?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
-                        alt={effectiveUser?.name}
-                        className={`w-16 h-16 rounded-2xl object-cover border-2 ${
-                          isUserWinner ? 'border-emerald-400' : 'border-[#0df2c9]'
-                        }`}
+                      <Avatar
+                        src={effectiveUser?.avatar}
+                        name={effectiveUser?.name}
+                        size="xl"
+                        className={`border-2 ${isUserWinner ? 'border-emerald-400' : 'border-[#0df2c9]'}`}
                       />
                       {isUserWinner && (
                         <div className="absolute -top-2 -right-2 bg-emerald-400 text-slate-950 p-1 rounded-full shadow">
@@ -601,12 +603,11 @@ export default function BattlePlayModal({ isOpen, onClose, battle, onComplete, b
                       : 'bg-[#111927] border-[#1f2d47]'
                   }`}>
                     <div className="relative">
-                      <img
+                      <Avatar
                         src={activeBattle.opponentAvatar}
-                        alt={activeBattle.opponentName}
-                        className={`w-16 h-16 rounded-2xl object-cover border-2 ${
-                          isOpponentWinner ? 'border-emerald-400' : 'border-[#8b5cf6]'
-                        }`}
+                        name={activeBattle.opponentName}
+                        size="xl"
+                        className={`border-2 ${isOpponentWinner ? 'border-emerald-400' : 'border-[#8b5cf6]'}`}
                       />
                       {isOpponentWinner && (
                         <div className="absolute -top-2 -right-2 bg-emerald-400 text-slate-950 p-1 rounded-full shadow">

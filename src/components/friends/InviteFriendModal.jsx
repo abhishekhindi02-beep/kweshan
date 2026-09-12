@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Users, Swords, UserPlus, Search, CheckCircle2, Flame, Trophy, Sparkles, BookOpen, ShieldCheck } from 'lucide-react';
 import Modal from '../common/Modal';
 import Badge from '../common/Badge';
+import Avatar from '../common/Avatar';
 import { useGame } from '../../context/GameContext';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -174,12 +175,14 @@ export default function InviteFriendModal({ isOpen, onClose, onChallengePeer }) 
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="relative flex-shrink-0">
-                        <img
+                        <Avatar
                           src={peer.avatar}
-                          alt={peer.name}
-                          className="w-12 h-12 rounded-2xl object-cover border border-[#22334d] group-hover:border-[#0df2c9] transition-colors"
+                          name={peer.name}
+                          size="lg"
+                          showStatus={true}
+                          status="online"
+                          className="group-hover:border-[#0df2c9] transition-colors"
                         />
-                        <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-emerald-400 border-2 border-[#0b101b]" title="Available" />
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5">

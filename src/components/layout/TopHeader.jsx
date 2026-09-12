@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Search, Zap, Menu, User, BookOpen, HelpCircle, Swords, X, Flame } from 'lucide-react';
+import Avatar from '../common/Avatar';
 import { useAuth } from '../../context/AuthContext';
 import { useGame } from '../../context/GameContext';
 
@@ -92,7 +93,7 @@ export default function TopHeader({ onOpenMobile }) {
                             className="flex items-center justify-between p-2 rounded-xl hover:bg-[#1a233a] cursor-pointer transition-colors"
                           >
                             <div className="flex items-center gap-2.5">
-                              <img src={p.avatar} alt={p.name} className="w-7 h-7 rounded-full object-cover" />
+                              <Avatar src={p.avatar} name={p.name} size="xs" />
                               <div>
                                 <div className="text-xs font-semibold text-white">{p.name}</div>
                                 <div className="text-[10px] text-[#64748b] font-mono">{p.handle || `@${p.username}`}</div>
@@ -173,14 +174,14 @@ export default function TopHeader({ onOpenMobile }) {
         {/* Streak Pill */}
         <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#131b2e] border border-amber-500/30 text-amber-400">
           <Flame className="w-3.5 h-3.5 fill-amber-400" />
-          <span className="text-xs font-bold font-mono">{effectiveUser.streak || 7}d</span>
+          <span className="text-xs font-bold font-mono">{effectiveUser.streak ?? 0}d</span>
         </div>
 
         {/* DP Pill Badge */}
         <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#131b2e] border border-[#1f2d47] text-[#0df2c9] shadow-[0_0_10px_rgba(13,242,201,0.15)]">
           <Zap className="w-3.5 h-3.5 fill-[#0df2c9]" />
           <span className="text-xs font-extrabold font-mono tracking-tight text-white">
-            {effectiveUser.dp ? effectiveUser.dp.toLocaleString() : '1,840'}
+            {typeof effectiveUser.dp === 'number' ? effectiveUser.dp.toLocaleString() : '0'}
           </span>
           <span className="text-[10px] font-mono uppercase text-[#0df2c9] font-bold">DP</span>
         </div>
@@ -191,10 +192,11 @@ export default function TopHeader({ onOpenMobile }) {
           className="relative group p-0.5 rounded-full transition-transform active:scale-95"
           title="View Scholar Profile"
         >
-          <img
+          <Avatar
             src={effectiveUser.avatar}
-            alt={effectiveUser.name}
-            className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover border border-[#2a3b5c] group-hover:border-[#0df2c9] transition-colors"
+            name={effectiveUser.name}
+            size="sm"
+            className="group-hover:border-[#0df2c9] transition-colors"
           />
         </Link>
       </div>

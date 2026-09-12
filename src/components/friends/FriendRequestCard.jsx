@@ -1,6 +1,7 @@
 import React from 'react';
 import { Check, X, Clock, Sparkles } from 'lucide-react';
 import Badge from '../common/Badge';
+import Avatar from '../common/Avatar';
 
 export default function FriendRequestCard({ request, onAccept, onDecline }) {
   const name = request.name || request.senderName || 'Scholar';
@@ -15,10 +16,11 @@ export default function FriendRequestCard({ request, onAccept, onDecline }) {
   return (
     <div className="bg-[#111927] border border-[#22334d] hover:border-[#0df2c9]/30 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all shadow-sm">
       <div className="flex items-start gap-3.5 min-w-0">
-        <img
+        <Avatar
           src={avatar}
-          alt={name}
-          className="w-12 h-12 rounded-2xl object-cover border border-[#22334d] flex-shrink-0"
+          name={name}
+          size="lg"
+          className="flex-shrink-0"
         />
         <div className="min-w-0 space-y-1">
           <div className="flex items-center gap-2 flex-wrap">
