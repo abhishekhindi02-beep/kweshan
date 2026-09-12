@@ -4,9 +4,25 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>kweshan</title>
-    <script type="module" crossorigin src="./assets/index-CJGw_X_K.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-CTas8FqG.css">
+    <title>Kweshun — Competitive Academic Duel Arena</title>
+    <script>
+      (function() {
+        try {
+          var saved = localStorage.getItem('kweshun_theme') || localStorage.getItem('theme');
+          if (saved === 'light') {
+            document.documentElement.classList.add('light');
+            document.documentElement.classList.remove('dark');
+          } else {
+            document.documentElement.classList.add('dark');
+            document.documentElement.classList.remove('light');
+          }
+        } catch (e) {
+          document.documentElement.classList.add('dark');
+        }
+      })();
+    </script>
+    <script type="module" crossorigin src="./assets/index-Du2q4NGt.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-By8Wi9Zc.css">
   </head>
   <body>
     <div id="root"></div>
