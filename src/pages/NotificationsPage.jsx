@@ -1,11 +1,22 @@
 import React, { useState } from 'react';
-import { Bell, CheckCheck, Swords, Award, Sparkles, Flame, CheckCircle, ExternalLink, ArrowRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Bell, CheckCheck, Swords, Award, Sparkles, Flame, CheckCircle, ExternalLink, ArrowRight, Zap } from 'lucide-react';
 import Badge from '../components/common/Badge';
 import { useGame } from '../context/GameContext';
 import { useToast } from '../context/ToastContext';
 
 export default function NotificationsPage({ onNavigate, onStartBattle }) {
-  const { notifications, markNotificationAsRead, markAllNotificationsAsRead } = useGame();
+  const navigate = useNavigate();
+  const { 
+    notifications, 
+    markNotificationAsRead, 
+    markAllNotificationsAsRead,
+    decks,
+    friends,
+    battles,
+    startBattleWith,
+    playDailyLightning
+  } = useGame();
   const { showToast } = useToast();
 
   const [filter, setFilter] = useState('all'); // all, unread
@@ -24,10 +35,118 @@ export default function NotificationsPage({ onNavigate, onStartBattle }) {
 
   const handleAction = (notif) => {
     markNotificationAsRead(notif.id);
-    if (notif.type === 'battle_invite') {
-      onNavigate('battles');
-    } else if (notif.type === 'question_approved' || notif.type === 'review_request') {
-      onNavigate('questions');
+
+    const titleLower = (notif.title || '').toLowerCase();
+    const msgLower = (notif.message || '').toLowerCase();
+    const type = notif.type || '';
+
+    // Check if it's a battle, duel, or challenge alert
+    const isBattleAlert = 
+      type === 'battle' || 
+      type === 'battle_challenge' || 
+      type === 'battle_invite' || 
+      type === 'challenge_dispatched' ||
+      titleLower.includes('challenge') || 
+      titleLower.includes('duel') || 
+      titleLower.includes('battle') ||
+      msgLower.includes('challenged') || 
+      msgLower.includes('duel') ||
+      msgLower.includes('vs');
+
+    if (isBattleAlert) {
+      // 1. Resolve deck
+      let matchedDeck = null;
+      if (notif.metadata?.deckId) {
+        matchedDeck = (decks || []).find((d) => d.id === notif.metadata.deckId);
+      }
+      if (!matchedDeck && notif.message) {
+        matchedDeck = (decks || []).find((d) => 
+          msgLower.includes((d.title || '').toLowerCase()) || 
+          (d.subject && msgLower.includes((d.subject || '').toLowerCase()))
+        );
+      }
+      if (!matchedDeck) {
+        matchedDeck = (decks || [])[0] || { id: 'deck_1', title: 'Academic Duel' };
+      }
+
+      // 2. Resolve opponent info
+      let opponentName = notif.metadata?.challengerName || notif.metadata?.opponentName;
+      let opponentAvatar = notif.metadata?.challengerAvatar || notif.metadata?.opponentAvatar;
+      let opponentId = notif.metadata?.challengerId || notif.metadata?.opponentId;
+      let opponentRank = notif.metadata?.opponentRank || 'Master Duelist';
+      let opponentLevel = notif.metadata?.opponentLevel || 12;
+
+      if (!opponentName && notif.message) {
+        const matchedFriend = (friends || []).find((f) => msgLower.includes(f.name.toLowerCase()));
+        if (matchedFriend) {
+          opponentName = matchedFriend.name;
+          opponentAvatar = matchedFriend.avatar;
+          opponentId = matchedFriend.id;
+          opponentRank = matchedFriend.rank || opponentRank;
+          opponentLevel = matchedFriend.level || opponentLevel;
+        } else {
+          const challengeMatch = notif.message.match(/^([^]+?)\s+challenged\s+you/i);
+          if (challengeMatch && challengeMatch[1]) {
+            opponentName = challengeMatch[1].trim();
+          }
+        }
+      }
+
+      opponentName = opponentName || 'Alfonso Lubin';
+
+      showToast(`Entering battle arena against ${opponentName}!`, 'success');
+
+      // 3. Trigger Battle Launch
+      if (typeof onStartBattle === 'function') {
+        onStartBattle(matchedDeck.id, {
+          opponentId,
+          opponentName,
+          opponentAvatar: opponentAvatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+          opponentRank,
+          opponentLevel,
+          subject: matchedDeck.title || 'Academic Face-Off'
+        });
+      } else if (typeof startBattleWith === 'function') {
+        startBattleWith(opponentId || 'user_2', matchedDeck.id, matchedDeck.title || 'Academic Duel');
+      }
+      return;
+    }
+
+    // Check if it's Lightning Arena event
+    const isLightning = 
+      type === 'lightning' || 
+      type === 'daily_lightning' || 
+      titleLower.includes('lightning') || 
+      msgLower.includes('lightning');
+
+    if (isLightning) {
+      if (typeof playDailyLightning === 'function') {
+        playDailyLightning();
+      } else {
+        navigate('/');
+      }
+      return;
+    }
+
+    // Check if it's Question / Review / Reward notification
+    const isQuestionAlert = 
+      type === 'reward' || 
+      type === 'question_approved' || 
+      type === 'review_request' || 
+      type === 'question' ||
+      titleLower.includes('question') ||
+      msgLower.includes('question');
+
+    if (isQuestionAlert) {
+      navigate('/questions');
+      return;
+    }
+
+    // Fallback navigation or toast
+    if (notif.link) {
+      navigate(notif.link);
+    } else if (typeof onNavigate === 'function') {
+      onNavigate(notif.type);
     } else {
       showToast(notif.message, 'info');
     }
@@ -35,14 +154,20 @@ export default function NotificationsPage({ onNavigate, onStartBattle }) {
 
   const getIcon = (type) => {
     switch (type) {
+      case 'battle':
+      case 'battle_challenge':
       case 'battle_invite':
         return <Swords className="w-5 h-5 text-[#0df2c9]" />;
       case 'question_approved':
         return <CheckCircle className="w-5 h-5 text-emerald-400" />;
       case 'dp_earned':
+      case 'reward':
         return <Award className="w-5 h-5 text-amber-400" />;
       case 'streak_milestone':
         return <Flame className="w-5 h-5 text-rose-400" />;
+      case 'lightning':
+      case 'event':
+        return <Zap className="w-5 h-5 text-[#0df2c9]" />;
       default:
         return <Sparkles className="w-5 h-5 text-[#8b5cf6]" />;
     }

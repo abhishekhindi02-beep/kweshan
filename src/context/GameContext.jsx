@@ -267,9 +267,35 @@ export function GameProvider({ children }) {
   };
 
   const handleNotificationAction = (notif) => {
+    if (!notif) return;
     markNotificationRead(notif.id);
-    if (notif.type === 'battle_challenge' && notif.metadata?.battleId) {
-      setActiveBattleId(notif.metadata.battleId);
+
+    const titleLower = (notif.title || '').toLowerCase();
+    const msgLower = (notif.message || '').toLowerCase();
+    const type = notif.type || '';
+
+    const isBattleAlert = 
+      type === 'battle' || 
+      type === 'battle_challenge' || 
+      type === 'battle_invite' || 
+      type === 'challenge_dispatched' ||
+      titleLower.includes('challenge') || 
+      titleLower.includes('duel') || 
+      titleLower.includes('battle') ||
+      msgLower.includes('challenged');
+
+    if (isBattleAlert) {
+      if (notif.metadata?.battleId) {
+        const existing = dataStore.battles.find((b) => b.id === notif.metadata.battleId);
+        if (existing) {
+          setActiveBattleId(existing.id);
+          setActiveBattleData(existing);
+          return;
+        }
+      }
+      const deckId = notif.metadata?.deckId || 'deck_1';
+      const opponentId = notif.metadata?.challengerId || notif.metadata?.opponentId || 'user_2';
+      startBattleWith(opponentId, deckId);
     }
   };
 
