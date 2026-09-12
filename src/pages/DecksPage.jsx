@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { BookOpen, Search, Play, Award, Sparkles, Filter, ChevronRight } from 'lucide-react';
 import Badge from '../components/common/Badge';
 import ProgressBar from '../components/common/ProgressBar';
@@ -6,8 +7,23 @@ import { useGame } from '../context/GameContext';
 
 export default function DecksPage({ onStartPractice, onStartBattle }) {
   const { decks, startPracticeDeck } = useGame();
+  const params = useParams();
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Handle direct route /practice/:deckId or /decks/:deckId
+  useEffect(() => {
+    if (params.deckId && decks.length > 0) {
+      const found = decks.find((d) => d.id === params.deckId);
+      if (found) {
+        if (onStartPractice) {
+          onStartPractice(found);
+        } else {
+          startPracticeDeck(found.id);
+        }
+      }
+    }
+  }, [params.deckId, decks]);
 
   const categories = ['all', 'Science', 'Mathematics', 'Computer Science', 'Economics', 'History'];
 

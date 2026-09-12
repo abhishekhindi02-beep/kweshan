@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { Swords, Plus, Zap, Trophy, History, Send, Inbox, ShieldCheck } from 'lucide-react';
 import BattleCard from '../components/battles/BattleCard';
 import ChallengeModal from '../components/battles/ChallengeModal';
@@ -11,9 +12,20 @@ export default function BattlesPage({ onStartBattle, onStartLightning }) {
   const { battles, battleInvites, acceptBattleInvite, declineBattleInvite, friends } = useGame();
   const { user } = useAuth();
   const { showToast } = useToast();
+  const params = useParams();
 
   const [activeTab, setActiveTab] = useState('active'); // active, invites, history
   const [isChallengeModalOpen, setIsChallengeModalOpen] = useState(false);
+
+  // Auto-launch battle if route has :id
+  useEffect(() => {
+    if (params.id && battles.length > 0) {
+      const targetBattle = battles.find((b) => b.id === params.id);
+      if (targetBattle && onStartBattle) {
+        onStartBattle(targetBattle.deckId, targetBattle);
+      }
+    }
+  }, [params.id, battles]);
 
   const activeBattles = battles.filter((b) => b.status === 'in_progress');
   const finishedBattles = battles.filter((b) => b.status === 'completed');

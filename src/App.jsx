@@ -98,11 +98,11 @@ export default function App() {
     <Router>
       <div className="min-h-screen bg-[#090d16] text-[#f8fafc] font-sans antialiased selection:bg-[#0df2c9]/30 selection:text-[#0df2c9]">
         <Routes>
-          {/* Public Auth Routes */}
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
+          {/* Public Auth Routes redirect directly to Dashboard (No Login Wall for Prototype) */}
+          <Route path="/login" element={<Navigate to="/" replace />} />
+          <Route path="/register" element={<Navigate to="/" replace />} />
 
-          {/* Main Authenticated Application Routes with AppShell */}
+          {/* Main Prototype Application Routes with AppShell */}
           <Route
             path="/*"
             element={
@@ -121,13 +121,58 @@ export default function App() {
                   <Route
                     path="/home"
                     element={
-                      <Navigate to="/" replace />
+                      <HomePage
+                        onOpenBattle={handleOpenQuickMatch}
+                        onOpenLightning={() => setIsLightningOpen(true)}
+                        onStartPractice={handleStartPractice}
+                      />
+                    }
+                  />
+                  <Route
+                    path="/arena/lightning"
+                    element={
+                      <HomePage
+                        onOpenBattle={handleOpenQuickMatch}
+                        onOpenLightning={() => setIsLightningOpen(true)}
+                        onStartPractice={handleStartPractice}
+                        autoOpenLightning={true}
+                      />
                     }
                   />
                   <Route path="/questions" element={<QuestionsPage />} />
+                  <Route path="/questions/new" element={<QuestionsPage />} />
+                  <Route path="/questions/:id" element={<QuestionsPage />} />
+                  <Route path="/questions/:id/analytics" element={<QuestionsPage />} />
                   <Route path="/questions/*" element={<QuestionsPage />} />
                   <Route
                     path="/battles"
+                    element={
+                      <BattlesPage
+                        onStartBattle={handleOpenQuickMatch}
+                        onStartLightning={() => setIsLightningOpen(true)}
+                      />
+                    }
+                  />
+                  <Route
+                    path="/battles/:id"
+                    element={
+                      <BattlesPage
+                        onStartBattle={handleOpenQuickMatch}
+                        onStartLightning={() => setIsLightningOpen(true)}
+                      />
+                    }
+                  />
+                  <Route
+                    path="/battles/:id/play"
+                    element={
+                      <BattlesPage
+                        onStartBattle={handleOpenQuickMatch}
+                        onStartLightning={() => setIsLightningOpen(true)}
+                      />
+                    }
+                  />
+                  <Route
+                    path="/battles/:id/result"
                     element={
                       <BattlesPage
                         onStartBattle={handleOpenQuickMatch}
@@ -146,6 +191,24 @@ export default function App() {
                   />
                   <Route
                     path="/decks"
+                    element={
+                      <DecksPage
+                        onStartPractice={handleStartPractice}
+                        onStartBattle={handleLaunchBattle}
+                      />
+                    }
+                  />
+                  <Route
+                    path="/decks/:deckId"
+                    element={
+                      <DecksPage
+                        onStartPractice={handleStartPractice}
+                        onStartBattle={handleLaunchBattle}
+                      />
+                    }
+                  />
+                  <Route
+                    path="/practice/:deckId"
                     element={
                       <DecksPage
                         onStartPractice={handleStartPractice}

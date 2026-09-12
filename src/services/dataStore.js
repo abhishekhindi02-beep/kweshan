@@ -12,8 +12,38 @@ import {
   initialDPTransactions
 } from './mockData.js';
 import { calculateQualityScores } from './qualityScorer.js';
+import storageService, { STORAGE_KEYS } from './storageService.js';
 
 const STORAGE_KEY = 'kweshun_app_state_v3';
+
+export function validateQuestion(q) {
+  if (!q) return { valid: false, error: 'Question object is missing' };
+  if (!q.id) return { valid: false, error: 'Question ID is required' };
+  if (!q.deckId) return { valid: false, error: 'Question must be assigned to a deck' };
+  const prompt = q.prompt || q.text || q.question;
+  if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
+    return { valid: false, error: 'Question prompt is required' };
+  }
+  if (!Array.isArray(q.options) || q.options.length !== 4) {
+    return { valid: false, error: 'Question must have exactly 4 options' };
+  }
+  for (let i = 0; i < 4; i++) {
+    const optText = typeof q.options[i] === 'string' ? q.options[i] : q.options[i]?.text;
+    if (!optText || !optText.trim()) {
+      return { valid: false, error: `Option ${String.fromCharCode(65 + i)} cannot be empty` };
+    }
+  }
+  const correctIdx = typeof q.correctAnswerIndex === 'number' 
+    ? q.correctAnswerIndex 
+    : (typeof q.correctIndex === 'number' ? q.correctIndex : q.options.findIndex(o => (typeof o === 'object' && o.isCorrect)));
+  if (correctIdx < 0 || correctIdx > 3) {
+    return { valid: false, error: 'Valid correct answer index (0-3) is required' };
+  }
+  if (!q.explanation || typeof q.explanation !== 'string' || !q.explanation.trim()) {
+    return { valid: false, error: 'Explanation is required' };
+  }
+  return { valid: true, error: null };
+}
 
 export function normalizeQuestion(q) {
   if (!q) return null;
@@ -116,14 +146,36 @@ class DataStore {
     try {
       if (typeof localStorage !== 'undefined') {
         const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          this.users = parsed.users || initialUsers;
+        const savedUser = storageService.getUser();
+        const savedQuestions = storageService.getQuestions();
+        const savedDecks = storageService.getDecks();
+        const savedBattles = storageService.getBattles();
+        const savedFriends = storageService.getFriends();
+        const savedRequests = storageService.getPendingRequests();
+        const savedNotifs = storageService.getNotifications();
+        const savedActivities = storageService.getActivity();
+
+        if (saved || savedUser || savedQuestions) {
+          const parsed = saved ? JSON.parse(saved) : {};
+          
+          // Users
+          if (savedUser) {
+            this.users = parsed.users || initialUsers;
+            const idx = this.users.findIndex(u => u.id === (savedUser.id || 'user_1'));
+            if (idx >= 0) {
+              this.users[idx] = { ...this.users[idx], ...savedUser };
+            } else {
+              this.users.unshift(savedUser);
+            }
+          } else {
+            this.users = parsed.users || initialUsers;
+          }
+
           this.currentUserId = parsed.currentUserId || 'user_1';
-          this.decks = parsed.decks || initialDecks;
+          this.decks = savedDecks || parsed.decks || initialDecks;
           
           // Ensure questions are merged with initial questions
-          const loadedQuestions = (parsed.questions || []).map(normalizeQuestion);
+          const loadedQuestions = (savedQuestions || parsed.questions || []).map(normalizeQuestion);
           const initialNormalized = initialQuestions.map(normalizeQuestion);
           
           // Combine loaded questions and any missing initial questions
@@ -131,13 +183,13 @@ class DataStore {
           const missing = initialNormalized.filter(q => !loadedIds.has(q.id));
           this.questions = [...loadedQuestions, ...missing];
 
-          this.battles = parsed.battles || initialBattles;
+          this.battles = savedBattles || parsed.battles || initialBattles;
           this.incomingInvites = parsed.incomingInvites || initialIncomingInvites;
           this.battleLogs = parsed.battleLogs || initialBattleLogs;
-          this.friendRequests = parsed.friendRequests || initialFriendRequests;
-          this.friends = parsed.friends || initialFriends;
-          this.notifications = parsed.notifications || initialNotifications;
-          this.activities = parsed.activities || initialActivities;
+          this.friendRequests = savedRequests || parsed.friendRequests || initialFriendRequests;
+          this.friends = savedFriends || parsed.friends || initialFriends;
+          this.notifications = savedNotifs || parsed.notifications || initialNotifications;
+          this.activities = savedActivities || parsed.activities || initialActivities;
           this.dpTransactions = parsed.dpTransactions || initialDPTransactions;
           return;
         }
@@ -168,6 +220,19 @@ class DataStore {
           dpTransactions: this.dpTransactions
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+
+        // Also save to individual standardized storage keys
+        const currentUser = this.getCurrentUser();
+        if (currentUser) {
+          storageService.saveUser(currentUser);
+        }
+        storageService.saveQuestions(this.questions);
+        storageService.saveDecks(this.decks);
+        storageService.saveBattles(this.battles);
+        storageService.saveFriends(this.friends);
+        storageService.savePendingRequests(this.friendRequests);
+        storageService.saveNotifications(this.notifications);
+        storageService.saveActivity(this.activities);
       }
     } catch (e) {
       console.error('Failed to save state to localStorage', e);

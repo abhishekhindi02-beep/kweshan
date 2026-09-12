@@ -1,12 +1,12 @@
 export const initialUsers = [
   {
     id: 'user_1',
-    name: 'Kianna Torff',
-    username: 'kianna_t',
-    email: 'kianna@kweshun.edu',
+    name: 'Abhishek Hindi',
+    username: 'abhishek_h',
+    email: 'abhishek@kweshun.edu',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
     level: 14,
-    tier: 'GRANDMASTER CADET',
+    tier: 'Scholar',
     dp: 2840,
     streak: 7,
     lastActiveDate: new Date().toISOString(),

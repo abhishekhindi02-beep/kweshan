@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import { Plus, Search, Filter, Sparkles, CheckCircle2, Clock, FileText, BarChart2 } from 'lucide-react';
 import QualityDashboard from '../components/questions/QualityDashboard';
 import QuestionCard from '../components/questions/QuestionCard';
@@ -14,6 +15,9 @@ export default function QuestionsPage() {
   const { user, currentUser } = useAuth();
   const effectiveUser = currentUser || user || { id: 'user_1', name: 'Kianna Torff' };
   const { showToast } = useToast();
+  const location = useLocation();
+  const params = useParams();
+  const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState('all'); // all, approved, pending, draft, my
   const [searchQuery, setSearchQuery] = useState('');
@@ -23,6 +27,25 @@ export default function QuestionsPage() {
   const [isAuthorModalOpen, setIsAuthorModalOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState(null);
   const [analyticsQuestion, setAnalyticsQuestion] = useState(null);
+
+  // Sync route state with modals
+  useEffect(() => {
+    if (location.pathname === '/questions/new') {
+      setIsAuthorModalOpen(true);
+      setEditingQuestion(null);
+    } else if (location.pathname.includes('/analytics') && params.id) {
+      const targetQ = questions.find((q) => q.id === params.id);
+      if (targetQ) {
+        setAnalyticsQuestion(targetQ);
+      }
+    } else if (params.id && questions.length > 0) {
+      const targetQ = questions.find((q) => q.id === params.id);
+      if (targetQ) {
+        setEditingQuestion(targetQ);
+        setIsAuthorModalOpen(true);
+      }
+    }
+  }, [location.pathname, params.id, questions]);
 
   const filteredQuestions = useMemo(() => {
     return questions.filter((q) => {
