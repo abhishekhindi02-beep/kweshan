@@ -1,37 +1,59 @@
 @import "tailwindcss";
 
-@layer base {
-  :root {
-    --bg-main: #090d16;
-    --bg-surface: #0f1626;
-    --bg-card: #131b2e;
-    --bg-card-hover: #19233c;
-    --border-subtle: #1c273e;
-    --border-glow: #2a3b5c;
-    --text-primary: #f8fafc;
-    --text-secondary: #94a3b8;
-    --text-muted: #64748b;
-    --accent-mint: #00f59b;
-    --accent-purple: #8b5cf6;
-    --accent-gold: #f59e0b;
-    --accent-red: #ef4444;
-  }
+/* -------------------------------------------------------------------------- */
+/* THEME TOKENS & CSS VARIABLES                                              */
+/* -------------------------------------------------------------------------- */
+:root {
+  --bg-main: #090d16;
+  --bg-sidebar: #0d121f;
+  --bg-header: rgba(9, 13, 22, 0.85);
+  --bg-surface: #0f1626;
+  --bg-card: #131b2e;
+  --bg-card-hover: #19233c;
+  --bg-elevated: #1b273a;
+  --bg-input: #0b101b;
+  --border-subtle: #1c273e;
+  --border-card: #1f2d47;
+  --border-glow: #2a3b5c;
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --accent-mint: #0df2c9;
+  --accent-purple: #8b5cf6;
+  --accent-gold: #f59e0b;
+  --accent-red: #ef4444;
+  color-scheme: dark;
+}
 
-  .light {
-    --bg-main: #f8fafc;
-    --bg-surface: #ffffff;
-    --bg-card: #ffffff;
-    --bg-card-hover: #f1f5f9;
-    --border-subtle: #e2e8f0;
-    --border-glow: #cbd5e1;
-    --text-primary: #0f172a;
-    --text-secondary: #475569;
-    --text-muted: #94a3b8;
-    --accent-mint: #059669;
-    --accent-purple: #7c3aed;
-    --accent-gold: #d97706;
-    --accent-red: #dc2626;
-  }
+.light {
+  --bg-main: #f4f6fb;
+  --bg-sidebar: #ffffff;
+  --bg-header: rgba(255, 255, 255, 0.9);
+  --bg-surface: #ffffff;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f8fafc;
+  --bg-elevated: #f1f5f9;
+  --bg-input: #ffffff;
+  --border-subtle: #e2e8f0;
+  --border-card: #e2e8f0;
+  --border-glow: #cbd5e1;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --accent-mint: #00bfa5;
+  --accent-purple: #7c3aed;
+  --accent-gold: #d97706;
+  --accent-red: #dc2626;
+  color-scheme: light;
+}
+
+/* -------------------------------------------------------------------------- */
+/* GLOBAL BASE STYLES & TRANSITIONS                                          */
+/* -------------------------------------------------------------------------- */
+* {
+  transition-property: background-color, border-color, color, fill, stroke, box-shadow;
+  transition-duration: 150ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 body {
@@ -49,6 +71,8 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  background-color: var(--bg-main);
+  color: var(--text-primary);
 }
 
 /* Custom Scrollbars */
@@ -96,6 +120,329 @@ body {
 .pulse-live {
   animation: pulse-dot 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
+
+/* -------------------------------------------------------------------------- */
+/* LIGHT THEME COMPREHENSIVE CLASS OVERRIDES                                  */
+/* -------------------------------------------------------------------------- */
+
+/* 1. Page Backgrounds */
+.light body,
+.light #root,
+.light .min-h-screen,
+.light .min-h-screen.bg-\[\#090d16\],
+.light .bg-\[\#090d16\],
+.light .bg-\[\#070a12\] {
+  background-color: #f4f6fb !important;
+  color: #0f172a !important;
+}
+
+/* 2. Sidebars, Headers, Modals & Main Cards */
+.light aside.bg-\[\#0d121f\],
+.light .bg-\[\#0d121f\],
+.light .bg-\[\#0f1626\],
+.light .bg-\[\#101726\],
+.light .bg-\[\#111927\],
+.light .bg-\[\#131b2e\] {
+  background-color: #ffffff !important;
+}
+
+/* 3. Elevated Surfaces, Sub-containers, Tags & Icon Boxes */
+.light .bg-\[\#111827\],
+.light .bg-\[\#152037\],
+.light .bg-\[\#162035\],
+.light .bg-\[\#1a233a\],
+.light .bg-\[\#1b273a\],
+.light .bg-\[\#1e293b\],
+.light .bg-\[\#25354e\],
+.light .bg-slate-900,
+.light .bg-slate-800 {
+  background-color: #f1f5f9 !important;
+}
+
+/* 4. Form Controls: Inputs, Textareas, Selects */
+.light .bg-\[\#0b101b\],
+.light input.bg-\[\#0b101b\],
+.light input.bg-\[\#101726\]\/90,
+.light input.bg-\[\#111927\],
+.light textarea.bg-\[\#0b101b\],
+.light textarea.bg-\[\#111927\],
+.light select.bg-\[\#0b101b\],
+.light select.bg-\[\#111927\] {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+.light input::placeholder,
+.light textarea::placeholder,
+.light .placeholder-slate-500::placeholder,
+.light .placeholder-slate-400::placeholder,
+.light .placeholder-\[\#64748b\]::placeholder {
+  color: #94a3b8 !important;
+}
+
+.light input:focus,
+.light textarea:focus,
+.light select:focus {
+  border-color: #0df2c9 !important;
+  box-shadow: 0 0 0 2px rgba(13, 242, 201, 0.25) !important;
+}
+
+/* 5. Borders in Light Mode */
+.light .border-\[\#162035\],
+.light .border-\[\#19233a\],
+.light .border-\[\#1c273e\],
+.light .border-\[\#1f2d47\],
+.light .border-\[\#22334d\],
+.light .border-\[\#2a3b5c\],
+.light .border-\[\#2e4363\],
+.light .border-\[\#233150\],
+.light .border-\[\#1e293b\],
+.light .border-slate-800,
+.light .border-slate-700 {
+  border-color: #e2e8f0 !important;
+}
+
+.light .border-\[\#22334d\]\/80 {
+  border-color: #e2e8f0 !important;
+}
+
+/* 6. Hover States in Light Mode */
+.light .hover\:bg-\[\#111827\]:hover,
+.light .hover\:bg-\[\#131b2e\]:hover,
+.light .hover\:bg-\[\#152037\]:hover,
+.light .hover\:bg-\[\#162035\]:hover,
+.light .hover\:bg-\[\#19233a\]:hover,
+.light .hover\:bg-\[\#1a233a\]:hover,
+.light .hover\:bg-\[\#1b273a\]:hover,
+.light .hover\:bg-\[\#19233c\]:hover,
+.light .hover\:bg-\[\#25354e\]:hover,
+.light .hover\:bg-slate-800:hover,
+.light .hover\:bg-slate-900:hover {
+  background-color: #f1f5f9 !important;
+}
+
+/* 7. Typography / Text Colors in Light Mode */
+.light .text-white,
+.light .text-\[\#f8fafc\],
+.light .text-slate-100,
+.light .text-slate-200 {
+  color: #0f172a !important;
+}
+
+.light .text-slate-300,
+.light .text-slate-400,
+.light .text-\[\#94a3b8\] {
+  color: #475569 !important;
+}
+
+.light .text-slate-500,
+.light .text-\[\#64748b\] {
+  color: #64748b !important;
+}
+
+/* Maintain dark readable text on vibrant mint buttons */
+.light .bg-\[\#0df2c9\].text-slate-950,
+.light .bg-gradient-to-r.from-\[\#0df2c9\].text-slate-950,
+.light .bg-\[\#0df2c9\] .text-slate-950,
+.light .text-slate-950 {
+  color: #020617 !important;
+}
+
+/* 8. Active Nav Link in Sidebar */
+.light nav a.text-\[\#0df2c9\].bg-\[\#152037\] {
+  background-color: #e6faf6 !important;
+  color: #008767 !important;
+  border-color: #0df2c9 !important;
+}
+
+/* 9. Top Header Backdrop */
+.light header.bg-\[\#090d16\]\/85 {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05) !important;
+}
+
+/* 10. Modals & Dialogs */
+.light .bg-black\/80,
+.light .bg-black\/70 {
+  background-color: rgba(15, 23, 42, 0.45) !important;
+}
+
+.light div[role="dialog"],
+.light .shadow-2xl.shadow-black\/80 {
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* 11. Soft Card Elevation in Light Mode */
+.light .shadow-sm {
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05) !important;
+}
+
+.light .shadow-md {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.06), 0 2px 4px -2px rgba(0, 0, 0, 0.06) !important;
+}
+
+.light .shadow-lg {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.06), 0 4px 6px -4px rgba(0, 0, 0, 0.06) !important;
+}
+
+/* 12. Toast Notifications in Light Mode */
+.light .bg-\[\#0c1a24\] {
+  background-color: #ffffff !important;
+  border-color: #0df2c9 !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1) !important;
+}
+
+.light .bg-\[\#1c1117\] {
+  background-color: #ffffff !important;
+  border-color: #ef4444 !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1) !important;
+}
+
+.light .bg-\[\#141228\] {
+  background-color: #ffffff !important;
+  border-color: #8b5cf6 !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* 13. Light Mode Scrollbars */
+.light ::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.light ::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+}
+
+.light ::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* 14. Progress Bar Track */
+.light .bg-\[\#1e293b\]\/70,
+.light .bg-\[\#1e293b\] {
+  background-color: #e2e8f0 !important;
+}
+
+/* 15. Badges in Light Mode */
+.light .bg-\[\#1a233a\].text-\[\#94a3b8\] {
+  background-color: #f1f5f9 !important;
+  color: #475569 !important;
+  border-color: #e2e8f0 !important;
+}
+
+.light .bg-\[\#00f59b\]\/15,
+.light .bg-\[\#00f59b\]\/20,
+.light .bg-\[\#0df2c9\]\/15,
+.light .bg-\[\#0df2c9\]\/10,
+.light .bg-\[\#0df2c9\]\/20 {
+  background-color: #e6faf6 !important;
+  color: #008767 !important;
+  border-color: rgba(13, 242, 201, 0.5) !important;
+}
+
+.light .bg-\[\#8b5cf6\]\/15,
+.light .bg-\[\#8b5cf6\]\/20 {
+  background-color: #f3e8ff !important;
+  color: #6b21a8 !important;
+  border-color: rgba(139, 92, 246, 0.4) !important;
+}
+
+.light .bg-\[\#f59e0b\]\/15,
+.light .bg-\[\#f59e0b\]\/20 {
+  background-color: #fef3c7 !important;
+  color: #92400e !important;
+  border-color: rgba(245, 158, 11, 0.4) !important;
+}
+
+.light .bg-\[\#ef4444\]\/15,
+.light .bg-\[\#ef4444\]\/20 {
+  background-color: #fee2e2 !important;
+  color: #991b1b !important;
+  border-color: rgba(239, 68, 68, 0.4) !important;
+}
+
+.light .bg-\[\#64748b\]\/20 {
+  background-color: #f1f5f9 !important;
+  color: #475569 !important;
+  border-color: #cbd5e1 !important;
+}
+
+/* 16. Table Styles in Light Mode */
+.light table thead tr {
+  background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+  color: #64748b !important;
+}
+
+.light .divide-\[\#1b273a\] > :not([hidden]) ~ :not([hidden]),
+.light .divide-\[\#22334d\] > :not([hidden]) ~ :not([hidden]) {
+  border-color: #e2e8f0 !important;
+}
+
+.light table tbody tr:hover,
+.light .hover\:bg-\[\#182334\]\/50:hover {
+  background-color: #f8fafc !important;
+}
+
+/* 17. Dropdowns & Select Option Elements */
+.light select option {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+/* 18. Banner Gradients & Podium Blocks */
+.light .bg-gradient-to-r.from-\[\#111927\].via-\[\#142238\].to-\[\#0f172a\],
+.light .bg-gradient-to-r.from-\[\#0d3b42\].via-\[\#0e2738\].to-\[\#121927\] {
+  background-image: linear-gradient(to right, #e6faf6, #f0fdf9, #f8fafc) !important;
+  border-color: rgba(13, 242, 201, 0.4) !important;
+  box-shadow: 0 4px 20px -2px rgba(13, 242, 201, 0.1) !important;
+}
+
+.light .bg-gradient-to-br.from-\[\#101726\].to-\[\#0c1220\] {
+  background-image: linear-gradient(to bottom right, #ffffff, #f8fafc) !important;
+}
+
+.light .bg-gradient-to-br.from-\[\#1b123d\].via-\[\#120d2c\].to-\[\#090717\] {
+  background-image: linear-gradient(to bottom right, #faf5ff, #f3e8ff, #ffffff) !important;
+  border-color: #d8b4fe !important;
+}
+
+.light .bg-gradient-to-r.from-\[\#111927\].via-\[\#162032\].to-\[\#111927\] {
+  background-image: linear-gradient(to right, #f8fafc, #f1f5f9, #f8fafc) !important;
+}
+
+.light .bg-gradient-to-t.from-\[\#111927\].to-\[\#182334\],
+.light .bg-gradient-to-t.from-\[\#111927\].to-\[\#1e2e46\] {
+  background-image: linear-gradient(to top, #f1f5f9, #ffffff) !important;
+}
+
+.light .bg-gradient-to-r.from-white.via-slate-100.to-\[\#0df2c9\] {
+  background-image: linear-gradient(to right, #0f172a, #008767) !important;
+}
+
+/* 19. Enhanced Light Mode Text Contrast */
+.light .text-emerald-300,
+.light .text-emerald-400 {
+  color: #065f46 !important;
+}
+
+.light .text-rose-300,
+.light .text-rose-400 {
+  color: #9f1239 !important;
+}
+
+.light .text-amber-300,
+.light .text-amber-400 {
+  color: #92400e !important;
+}
+
+.light .text-purple-300,
+.light .text-purple-400 {
+  color: #581c87 !important;
+}
+
 
 
 
