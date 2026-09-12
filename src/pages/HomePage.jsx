@@ -86,28 +86,28 @@ export default function HomePage({ onOpenBattle, onOpenLightning, onStartPractic
         <StatCard
           icon={Award}
           title="Distinction Points"
-          value={effectiveUser?.dp?.toLocaleString() || '1,840'}
-          change="+120 DP this week"
+          value={typeof effectiveUser?.dp === 'number' ? effectiveUser.dp.toLocaleString() : '0'}
+          change={effectiveUser?.dp > 0 ? "+120 DP this week" : "Earn +30 DP per question"}
           color="mint"
         />
         <StatCard
           icon={Trophy}
           title="Leaderboard Rank"
           value={`#${effectiveUser?.monthlyRank || 1}`}
-          change="Top 0.5% Scholars"
+          change={effectiveUser?.tier || "Scholar Tier"}
           color="gold"
         />
         <StatCard
           icon={TrendingUp}
           title="Battle Win Rate"
-          value={effectiveUser?.totalBattles > 0 ? `${Math.round((effectiveUser.wins / effectiveUser.totalBattles) * 100)}%` : '78.4%'}
-          change={`${effectiveUser?.wins || 32} Wins / ${effectiveUser?.losses || 9} Losses`}
+          value={effectiveUser?.totalBattles > 0 ? `${Math.round(((effectiveUser?.wins || 0) / effectiveUser.totalBattles) * 100)}%` : '0%'}
+          change={`${effectiveUser?.wins || 0} Wins / ${effectiveUser?.losses || 0} Losses`}
           color="purple"
         />
         <StatCard
           icon={Flame}
           title="Active Daily Streak"
-          value={`${effectiveUser?.streak || 7} Days`}
+          value={`${effectiveUser?.streak ?? 0} Days`}
           change="Keep it burning!"
           color="rose"
         />

@@ -1,61 +1,127 @@
 import React, { useState } from 'react';
-import { Sparkles, ArrowRight, Lock, Mail, ShieldCheck } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Sparkles, ArrowRight, Lock, Mail, AlertCircle, Sun, Moon, UserPlus } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { useTheme } from '../context/ThemeContext';
 
-export default function LoginPage({ onNavigate }) {
-  const { login } = useAuth();
+export default function LoginPage() {
+  const navigate = useNavigate();
+  const { login, isRegistered } = useAuth();
   const { showToast } = useToast();
+  const { isDarkMode, toggleTheme } = useTheme();
 
-  const [email, setEmail] = useState('alex@kweshun.edu');
-  const [password, setPassword] = useState('password123');
+  const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [noProfileFound, setNoProfileFound] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!email) {
-      showToast('Please enter your email', 'error');
+    setErrorMessage('');
+    setNoProfileFound(false);
+
+    if (!identifier.trim()) {
+      setErrorMessage('Please enter your email or username.');
       return;
     }
-    const res = login(email, password);
+
+    setIsSubmitting(true);
+    const res = login(identifier.trim(), password);
+    setIsSubmitting(false);
+
     if (res?.success) {
-      showToast(`Welcome back, ${res.user?.name || 'Scholar'}!`, 'success');
+      if (showToast) {
+        showToast(`Welcome back, ${res.user?.name || 'Scholar'}!`, 'success');
+      }
+      navigate('/home');
+    } else {
+      setNoProfileFound(true);
+      setErrorMessage('No Kweshun profile found. Please sign up first.');
     }
   };
 
   return (
-    <div className="min-h-[85vh] flex items-center justify-center py-12 px-4 animate-fadeIn">
-      <div className="w-full max-w-md bg-[#111927] border border-[#22334d] rounded-3xl p-8 space-y-6 shadow-2xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-48 h-48 bg-[#0df2c9]/10 rounded-full blur-3xl pointer-events-none" />
+    <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-primary)] flex flex-col justify-between py-8 px-4 sm:px-6 lg:px-8 relative overflow-hidden transition-colors">
+      {/* Background glow orbs */}
+      <div className="absolute top-0 right-1/4 w-96 h-96 bg-[#0df2c9]/10 rounded-full blur-3xl pointer-events-none -z-10" />
+      <div className="absolute bottom-10 left-1/4 w-96 h-96 bg-[#8b5cf6]/10 rounded-full blur-3xl pointer-events-none -z-10" />
 
-        <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#0df2c9] to-[#00bfa5] text-slate-950 font-black text-2xl shadow-lg shadow-[#0df2c9]/30">
+      {/* Top Header Bar */}
+      <div className="max-w-md w-full mx-auto flex items-center justify-between mb-4">
+        <Link to="/" className="flex items-center gap-2 group">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[#0df2c9] to-[#8b5cf6] flex items-center justify-center text-slate-950 font-black text-sm shadow-md">
             K
           </div>
-          <h2 className="text-2xl font-black text-white tracking-tight">Scholar Sign In</h2>
-          <p className="text-xs text-slate-400">
+          <span className="font-black text-base text-[var(--text-primary)] tracking-tight group-hover:text-[#0df2c9] transition-colors">
+            KWESHUN
+          </span>
+        </Link>
+
+        <button
+          onClick={toggleTheme}
+          aria-label="Toggle Theme"
+          className="p-2 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[#0df2c9] transition-colors cursor-pointer"
+        >
+          {isDarkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-purple-600" />}
+        </button>
+      </div>
+
+      {/* Main Login Card */}
+      <div className="w-full max-w-md mx-auto bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl relative">
+        <div className="text-center space-y-2">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#0df2c9]/10 text-[#0df2c9] text-xs font-mono font-bold uppercase">
+            <Sparkles className="w-3.5 h-3.5" />
+            Scholar Authentication
+          </div>
+          <h2 className="text-2xl sm:text-3xl font-black text-[var(--text-primary)] tracking-tight">
+            Sign In to Kweshun
+          </h2>
+          <p className="text-xs text-[var(--text-secondary)]">
             Access your academic decks, active battles, and Distinction ledger.
           </p>
         </div>
 
+        {/* Error / No Profile Banner */}
+        {errorMessage && (
+          <div className="p-4 rounded-2xl bg-rose-500/15 border border-rose-500/40 text-rose-300 text-xs space-y-2.5 animate-fadeIn">
+            <div className="flex items-center gap-2 font-bold">
+              <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-400" />
+              <span>{errorMessage}</span>
+            </div>
+            {noProfileFound && (
+              <button
+                type="button"
+                onClick={() => navigate('/signup')}
+                className="w-full py-2 bg-gradient-to-r from-[#0df2c9] to-[#00bfa5] text-slate-950 font-black text-xs rounded-xl hover:shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer mt-1"
+              >
+                <UserPlus className="w-3.5 h-3.5" />
+                Create Free Account
+              </button>
+            )}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-              Academic Email
+            <label className="block text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-1.5">
+              Username or Academic Email
             </label>
             <div className="relative">
               <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="scholar@university.edu"
-                className="w-full bg-[#0b101b] border border-[#22334d] rounded-xl pl-10 pr-3.5 py-2.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-[#0df2c9]"
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
+                placeholder="e.g. abhishek or scholar@kweshun.edu"
+                className="w-full bg-[var(--bg-input)] border border-[var(--border-subtle)] rounded-xl pl-10 pr-3.5 py-2.5 text-xs text-[var(--text-primary)] placeholder-slate-500 focus:outline-none focus:border-[#0df2c9] transition-colors"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+            <label className="block text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-1.5">
               Password
             </label>
             <div className="relative">
@@ -65,39 +131,32 @@ export default function LoginPage({ onNavigate }) {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full bg-[#0b101b] border border-[#22334d] rounded-xl pl-10 pr-3.5 py-2.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-[#0df2c9]"
+                className="w-full bg-[var(--bg-input)] border border-[var(--border-subtle)] rounded-xl pl-10 pr-3.5 py-2.5 text-xs text-[var(--text-primary)] placeholder-slate-500 focus:outline-none focus:border-[#0df2c9] transition-colors"
               />
             </div>
           </div>
 
-          <div className="flex items-center justify-between text-xs text-slate-400 pt-1">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" defaultChecked className="rounded bg-[#0b101b] border-[#22334d] text-[#0df2c9] focus:ring-0" />
-              Remember device
-            </label>
-            <button type="button" className="text-[#0df2c9] hover:underline">
-              Forgot password?
-            </button>
-          </div>
-
           <button
             type="submit"
-            className="w-full py-3 bg-gradient-to-r from-[#0df2c9] to-[#00bfa5] text-slate-950 font-black text-sm rounded-xl hover:shadow-lg hover:shadow-[#0df2c9]/30 transition-all flex items-center justify-center gap-2 mt-4 cursor-pointer"
+            disabled={isSubmitting}
+            className="w-full py-3.5 bg-gradient-to-r from-[#0df2c9] to-[#00bfa5] text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl hover:shadow-lg hover:shadow-[#0df2c9]/30 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2 mt-4 cursor-pointer disabled:opacity-50"
           >
-            Sign In to Kweshun
-            <ArrowRight className="w-4 h-4" />
+            {isSubmitting ? 'Signing In...' : 'Continue'}
+            <ArrowRight className="w-4 h-4 stroke-[3]" />
           </button>
         </form>
 
-        <div className="text-center pt-2 border-t border-[#1b273a] text-xs text-slate-400">
+        <div className="text-center pt-2 border-t border-[var(--border-subtle)] text-xs text-[var(--text-secondary)]">
           Don't have an academic profile yet?{' '}
-          <button
-            onClick={() => onNavigate('register')}
-            className="text-[#0df2c9] font-bold hover:underline"
-          >
+          <Link to="/signup" className="text-[#0df2c9] font-bold hover:underline">
             Create Free Account
-          </button>
+          </Link>
         </div>
+      </div>
+
+      {/* Footer copyright */}
+      <div className="text-center text-[11px] text-[var(--text-muted)] font-mono py-4">
+        © {new Date().getFullYear()} Kweshun • Academic Arena Prototype
       </div>
     </div>
   );

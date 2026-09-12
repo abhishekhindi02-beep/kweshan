@@ -5,6 +5,7 @@
 
 export const STORAGE_KEYS = {
   USER: 'kweshun_user',
+  AUTH_SESSION: 'kweshun_auth_logged_in',
   QUESTIONS: 'kweshun_questions',
   DECKS: 'kweshun_decks',
   BATTLES: 'kweshun_battles',
@@ -66,6 +67,31 @@ class StorageService {
     if (user && typeof user.streak === 'number') {
       this.saveStreak(user.streak);
     }
+  }
+
+  isRegistered() {
+    const user = this.getUser();
+    return Boolean(user && user.isRegistered);
+  }
+
+  isLoggedIn() {
+    try {
+      if (typeof localStorage === 'undefined') return false;
+      const session = localStorage.getItem(STORAGE_KEYS.AUTH_SESSION);
+      const user = this.getUser();
+      if (!user || !user.isRegistered) return false;
+      return session !== 'false';
+    } catch (e) {
+      return false;
+    }
+  }
+
+  setLoggedIn(isLogged) {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(STORAGE_KEYS.AUTH_SESSION, isLogged ? 'true' : 'false');
+      }
+    } catch (e) {}
   }
 
   getQuestions() {

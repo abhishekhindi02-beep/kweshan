@@ -1,22 +1,37 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import dataStore from '../services/dataStore';
+import storageService from '../services/storageService';
 import { useToast } from './ToastContext';
 
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
-  const [currentUser, setCurrentUser] = useState(() => dataStore.getCurrentUser());
-  const [allUsers, setAllUsers] = useState(() => dataStore.users);
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    const saved = localStorage.getItem('kweshun_auth_logged_in');
-    return saved === null || saved === 'true';
+  const [currentUser, setCurrentUser] = useState(() => {
+    const savedUser = storageService.getUser();
+    if (savedUser && savedUser.isRegistered) {
+      return savedUser;
+    }
+    return dataStore.getCurrentUser();
   });
-  const { addToast } = useToast();
+
+  const [allUsers, setAllUsers] = useState(() => dataStore.users);
+
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return storageService.isLoggedIn();
+  });
+
+  const { showToast, addToast } = useToast();
+  const notifyToast = (msg, type = 'info', title = '') => {
+    if (showToast) showToast(msg, type);
+    else if (addToast) addToast({ title: title || msg, message: msg, type });
+  };
 
   useEffect(() => {
     const unsubscribe = dataStore.subscribe(() => {
-      setCurrentUser(dataStore.getCurrentUser());
+      const u = dataStore.getCurrentUser();
+      setCurrentUser(u);
       setAllUsers([...dataStore.users]);
+      setIsAuthenticated(storageService.isLoggedIn());
     });
     return unsubscribe;
   }, []);
@@ -26,46 +41,36 @@ export function AuthProvider({ children }) {
     if (res.user) {
       setCurrentUser(res.user);
       setIsAuthenticated(true);
-      localStorage.setItem('kweshun_auth_logged_in', 'true');
-      if (addToast) {
-        addToast({ title: 'Welcome back!', message: `Logged in as ${res.user.name}`, type: 'success' });
-      }
+      storageService.setLoggedIn(true);
+      notifyToast(`Welcome back, ${res.user.name}!`, 'success', 'Welcome Back');
       return { success: true, user: res.user };
     }
-    return { success: false, error: 'Invalid credentials' };
+    const err = res.error || 'No Kweshun profile found. Please sign up first.';
+    notifyToast(err, 'error', 'Sign In Failed');
+    return { success: false, error: err };
   };
 
   const register = (data) => {
-    const { name, username, email, password, handle, institution, dp, streak, rank } = data;
-    const cleanUsername = username || (handle ? handle.replace('@', '') : name.toLowerCase().replace(/\s+/g, '_'));
-    const res = dataStore.registerUser({ 
-      name, 
-      username: cleanUsername, 
-      email, 
-      password: password || 'pass123'
-    });
+    const res = dataStore.registerUser(data);
     if (res.error) {
-      if (addToast) {
-        addToast({ title: 'Registration Failed', message: res.error, type: 'error' });
-      }
+      notifyToast(res.error, 'error', 'Registration Failed');
       return { success: false, error: res.error };
     }
-    if (institution || rank || dp) {
-      dataStore.updateUser(res.user.id, { 
-        institution: institution || 'Academic Scholar', 
-        rank: rank || 'Scholar Tier', 
-        dp: dp || 1500, 
-        streak: streak || 1 
-      });
-    }
-    const updated = dataStore.getCurrentUser();
-    setCurrentUser(updated);
+    setCurrentUser(res.user);
     setIsAuthenticated(true);
-    localStorage.setItem('kweshun_auth_logged_in', 'true');
-    if (addToast) {
-      addToast({ title: 'Account Created', message: `Welcome to Kweshun, ${updated.name}!`, type: 'success' });
+    storageService.setLoggedIn(true);
+    notifyToast(`Welcome to Kweshun, ${res.user.name}!`, 'success', 'Profile Created');
+    return { success: true, user: res.user };
+  };
+
+  const updateUserSubjects = (subjects) => {
+    if (currentUser?.id) {
+      const updated = dataStore.updateUser(currentUser.id, { selectedSubjects: subjects });
+      if (updated) {
+        setCurrentUser(updated);
+        storageService.saveUser(updated);
+      }
     }
-    return { success: true, user: updated };
   };
 
   const updateUser = (updates) => {
@@ -73,6 +78,7 @@ export function AuthProvider({ children }) {
       const updated = dataStore.updateUser(currentUser.id, updates);
       if (updated) {
         setCurrentUser(updated);
+        storageService.saveUser(updated);
       }
     }
   };
@@ -82,29 +88,29 @@ export function AuthProvider({ children }) {
     const user = dataStore.getCurrentUser();
     setCurrentUser(user);
     setIsAuthenticated(true);
-    localStorage.setItem('kweshun_auth_logged_in', 'true');
-    if (addToast) {
-      addToast({ title: 'Profile Switched', message: `Now viewing as ${user.name}`, type: 'info' });
-    }
+    storageService.setLoggedIn(true);
+    notifyToast(`Now viewing as ${user.name}`, 'info', 'Profile Switched');
   };
 
   const logout = () => {
     setIsAuthenticated(false);
-    localStorage.setItem('kweshun_auth_logged_in', 'false');
-    if (addToast) {
-      addToast({ title: 'Signed Out', message: 'You have been signed out.', type: 'info' });
-    }
+    storageService.setLoggedIn(false);
+    notifyToast('You have been signed out.', 'info', 'Signed Out');
   };
+
+  const isRegistered = Boolean(storageService.isRegistered());
 
   return (
     <AuthContext.Provider value={{
       user: currentUser,
       currentUser,
       isAuthenticated,
+      isRegistered,
       allUsers,
       login,
       register,
       updateUser,
+      updateUserSubjects,
       switchUser,
       logout
     }}>

@@ -277,53 +277,87 @@ class DataStore {
     }
   }
 
-  registerUser({ name, username, email, password }) {
-    const cleanUsername = username.toLowerCase().replace(/\s+/g, '_');
-    const existing = this.users.find(u => u.email.toLowerCase() === email.toLowerCase() || u.username.toLowerCase() === cleanUsername);
-    if (existing) {
-      return { error: 'User with this email or username already exists' };
-    }
-
+  registerUser({ name, username, email, password, avatar, selectedSubjects }) {
+    const cleanUsername = username ? username.toLowerCase().replace(/\s+/g, '_').replace('@', '') : name.toLowerCase().replace(/\s+/g, '_');
+    const cleanEmail = email ? email.toLowerCase().trim() : `${cleanUsername}@kweshun.edu`;
+    
     const newUser = {
       id: `user_${Date.now()}`,
-      name,
+      name: name.trim(),
       username: cleanUsername,
-      email,
-      avatar: `https://images.unsplash.com/photo-${1534528741775 + Math.floor(Math.random() * 1000)}?w=150&auto=format&fit=crop&q=80`,
+      handle: `@${cleanUsername}`,
+      email: cleanEmail,
+      password: password || 'pass123',
+      avatar: avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
       level: 1,
-      tier: 'INITIATE DUELIST',
-      dp: 1000,
-      streak: 1,
+      tier: 'Scholar',
+      rank: 'Scholar Tier',
+      institution: 'Academic Scholar Guild',
+      dp: 0,
+      streak: 0,
       lastActiveDate: new Date().toISOString(),
       wins: 0,
       losses: 0,
       totalBattles: 0,
-      score: 100,
+      score: 0,
+      accuracy: 0,
       weeklyChange: 0,
       questionsAuthored: 0,
       pendingReviewCount: 0,
       monthlyRank: this.users.length + 1,
       totalPlayers: this.users.length + 1,
       onlineStatus: 'online',
-      bio: 'New recruit entering the academic arenas.',
+      bio: 'Competitive scholar on Kweshun.',
       royaltiesEarned: 0,
       globalAccuracy: 0,
-      mostPlayedDeck: 'Science',
+      mostPlayedDeck: 'General Knowledge',
+      selectedSubjects: selectedSubjects || [],
+      isRegistered: true,
       createdAt: new Date().toISOString()
     };
 
-    this.users.push(newUser);
+    // Remove previous demo user if exists, and unshift the new registered user
+    const existingIdx = this.users.findIndex(u => u.id === newUser.id || u.email.toLowerCase() === cleanEmail);
+    if (existingIdx >= 0) {
+      this.users[existingIdx] = newUser;
+    } else {
+      this.users.unshift(newUser);
+    }
+    
     this.currentUserId = newUser.id;
+    storageService.saveUser(newUser);
+    storageService.setLoggedIn(true);
     this.saveState();
     return { user: newUser };
   }
 
   loginUser(identifier, password) {
-    const clean = identifier.toLowerCase().trim();
-    const user = this.users.find(u => u.email.toLowerCase() === clean || u.username.toLowerCase() === clean) || this.users[0];
-    this.currentUserId = user.id;
-    this.saveState();
-    return { user };
+    const clean = (identifier || '').toLowerCase().trim();
+    const cleanNoAt = clean.replace('@', '');
+    const user = this.users.find(u => 
+      (u.email && u.email.toLowerCase() === clean) || 
+      (u.username && u.username.toLowerCase() === cleanNoAt) ||
+      (u.handle && u.handle.toLowerCase() === clean)
+    );
+
+    if (user) {
+      this.currentUserId = user.id;
+      storageService.saveUser(user);
+      storageService.setLoggedIn(true);
+      this.saveState();
+      return { user };
+    }
+
+    // Check if there is a saved user in storage
+    const savedUser = storageService.getUser();
+    if (savedUser && savedUser.isRegistered) {
+      this.currentUserId = savedUser.id;
+      storageService.setLoggedIn(true);
+      this.saveState();
+      return { user: savedUser };
+    }
+
+    return { error: 'No Kweshun profile found. Please sign up first.' };
   }
 
   updateUser(id, updates) {

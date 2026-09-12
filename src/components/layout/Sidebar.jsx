@@ -193,10 +193,10 @@ export default function Sidebar({ isMobileOpen, onCloseMobile }) {
               <button
                 onClick={() => {
                   logout();
-                  navigate('/login');
+                  navigate('/');
                 }}
                 title="Sign out"
-                className="p-1.5 rounded-lg text-[#64748b] hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                className="p-1.5 rounded-lg text-[#64748b] hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
               >
                 <LogOut className="w-4 h-4" />
               </button>
