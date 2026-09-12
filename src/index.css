@@ -25,22 +25,23 @@
   color-scheme: dark;
 }
 
+/* Redesigned Premium Cool Slate Light Mode */
 .light {
-  --bg-main: #f4f6fb;
-  --bg-sidebar: #ffffff;
-  --bg-header: rgba(255, 255, 255, 0.9);
+  --bg-main: #f1f5f9;
+  --bg-sidebar: #e8eef6;
+  --bg-header: #f8fafc;
   --bg-surface: #ffffff;
   --bg-card: #ffffff;
   --bg-card-hover: #f8fafc;
   --bg-elevated: #f1f5f9;
   --bg-input: #ffffff;
-  --border-subtle: #e2e8f0;
-  --border-card: #e2e8f0;
-  --border-glow: #cbd5e1;
+  --border-subtle: #cbd5e1;
+  --border-card: #cbd5e1;
+  --border-glow: #99f2e3;
   --text-primary: #0f172a;
   --text-secondary: #475569;
   --text-muted: #64748b;
-  --accent-mint: #00bfa5;
+  --accent-mint: #00ddb8;
   --accent-purple: #7c3aed;
   --accent-gold: #d97706;
   --accent-red: #dc2626;
@@ -122,34 +123,146 @@ body {
 }
 
 /* -------------------------------------------------------------------------- */
-/* LIGHT THEME COMPREHENSIVE CLASS OVERRIDES                                  */
+/* PREMIUM COOL SLATE LIGHT MODE RULES                                        */
 /* -------------------------------------------------------------------------- */
 
-/* 1. Page Backgrounds */
+/* 1. Page Background (Cool Slate #F1F5F9) */
 .light body,
 .light #root,
 .light .min-h-screen,
 .light .min-h-screen.bg-\[\#090d16\],
 .light .bg-\[\#090d16\],
 .light .bg-\[\#070a12\] {
-  background-color: #f4f6fb !important;
+  background-color: #f1f5f9 !important;
   color: #0f172a !important;
 }
 
-/* 2. Sidebars, Headers, Modals & Main Cards */
+/* 2. Sidebar (#E8EEF6 - Visually Distinct Cool Gray-Blue Surface) */
 .light aside.bg-\[\#0d121f\],
 .light .bg-\[\#0d121f\],
+.light aside {
+  background-color: #e8eef6 !important;
+  border-color: #cbd5e1 !important;
+}
+
+.light aside .border-\[\#162035\],
+.light aside .border-b,
+.light aside .border-t {
+  border-color: #cbd5e1 !important;
+}
+
+/* Inactive NavLink */
+.light aside nav a {
+  color: #475569 !important;
+}
+
+.light aside nav a svg {
+  color: #64748b !important;
+}
+
+.light aside nav a:hover {
+  background-color: #dce4ee !important;
+  color: #0f172a !important;
+}
+
+.light aside nav a:hover svg {
+  color: #0f172a !important;
+}
+
+/* Active NavLink (Mint Tinted Pill) */
+.light nav a.text-\[\#0df2c9\].bg-\[\#152037\],
+.light aside nav a.active {
+  background-color: rgba(0, 221, 184, 0.14) !important;
+  color: #007a60 !important;
+  border: 1px solid rgba(0, 221, 184, 0.45) !important;
+  box-shadow: 0 2px 8px rgba(0, 221, 184, 0.15) !important;
+}
+
+.light nav a.text-\[\#0df2c9\].bg-\[\#152037\] svg,
+.light aside nav a.active svg {
+  color: #00bfa5 !important;
+}
+
+/* Sidebar Theme Switch Container */
+.light aside .bg-\[\#111827\].border-\[\#1c273e\] {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04) !important;
+}
+
+/* Sidebar Profile Card Container */
+.light aside .bg-\[\#131b2e\].border-\[\#1f2d47\] {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04) !important;
+}
+
+/* 3. Header (#F8FAFC with Bottom Border #CBD5E1) */
+.light header.bg-\[\#090d16\]\/85,
+.light header {
+  background-color: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 1px 4px 0 rgba(15, 23, 42, 0.04) !important;
+}
+
+/* Header Search Input */
+.light input.bg-\[\#101726\]\/90,
+.light header input {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03) !important;
+}
+
+.light header input::placeholder {
+  color: #64748b !important;
+}
+
+.light header input:focus {
+  border-color: #00ddb8 !important;
+  box-shadow: 0 0 0 3px rgba(0, 221, 184, 0.2) !important;
+}
+
+/* DP Badge (Mint Accent Pill) */
+.light header .bg-\[\#131b2e\].text-\[\#0df2c9\] {
+  background-color: #e6faf6 !important;
+  border: 1px solid #99f2e3 !important;
+  color: #007a60 !important;
+  box-shadow: 0 2px 8px rgba(0, 221, 184, 0.15) !important;
+}
+
+.light header .bg-\[\#131b2e\].text-\[\#0df2c9\] svg {
+  fill: #00a389 !important;
+}
+
+.light header .bg-\[\#131b2e\].text-\[\#0df2c9\] span.text-white {
+  color: #0f172a !important;
+}
+
+/* Streak Badge (Gold Accent Pill) */
+.light header .bg-\[\#131b2e\].text-amber-400 {
+  background-color: #fff7d6 !important;
+  border: 1px solid #f5d66a !important;
+  color: #92400e !important;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.15) !important;
+}
+
+.light header .bg-\[\#131b2e\].text-amber-400 svg {
+  fill: #d97706 !important;
+}
+
+/* 4. Cards (#FFFFFF Elevated Surfaces on #F1F5F9 Cool Slate Page) */
 .light .bg-\[\#0f1626\],
 .light .bg-\[\#101726\],
 .light .bg-\[\#111927\],
 .light .bg-\[\#131b2e\] {
   background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 4px 14px 0 rgba(15, 23, 42, 0.05), 0 1px 3px 0 rgba(15, 23, 42, 0.03) !important;
 }
 
-/* 3. Elevated Surfaces, Sub-containers, Tags & Icon Boxes */
+/* Secondary / Sub-Cards & Panels */
 .light .bg-\[\#111827\],
-.light .bg-\[\#152037\],
-.light .bg-\[\#162035\],
 .light .bg-\[\#1a233a\],
 .light .bg-\[\#1b273a\],
 .light .bg-\[\#1e293b\],
@@ -157,12 +270,30 @@ body {
 .light .bg-slate-900,
 .light .bg-slate-800 {
   background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
 }
 
-/* 4. Form Controls: Inputs, Textareas, Selects */
+/* 5. Hero Welcome Banner (Premium Cool Gradient) */
+.light .bg-gradient-to-r.from-\[\#111927\].via-\[\#142238\].to-\[\#0f172a\] {
+  background-image: linear-gradient(135deg, #ffffff 0%, #e6faf6 50%, #eef4ff 100%) !important;
+  border-color: rgba(0, 221, 184, 0.45) !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 221, 184, 0.12), 0 4px 10px -2px rgba(15, 23, 42, 0.04) !important;
+}
+
+.light .bg-gradient-to-r.from-white.via-slate-100.to-\[\#0df2c9\] {
+  background-image: linear-gradient(135deg, #0f172a 0%, #008767 100%) !important;
+}
+
+/* Daily Lightning Arena Spotlight Banner */
+.light .bg-gradient-to-r.from-\[\#0d3b42\].via-\[\#0e2738\].to-\[\#121927\] {
+  background-image: linear-gradient(135deg, #ffffff 0%, #e6faf6 55%, #edf7ff 100%) !important;
+  border: 1px solid rgba(0, 221, 184, 0.45) !important;
+  box-shadow: 0 8px 20px -4px rgba(0, 221, 184, 0.12) !important;
+}
+
+/* 6. Form Controls: Inputs, Textareas, Selects */
 .light .bg-\[\#0b101b\],
 .light input.bg-\[\#0b101b\],
-.light input.bg-\[\#101726\]\/90,
 .light input.bg-\[\#111927\],
 .light textarea.bg-\[\#0b101b\],
 .light textarea.bg-\[\#111927\],
@@ -171,6 +302,7 @@ body {
   background-color: #ffffff !important;
   color: #0f172a !important;
   border-color: #cbd5e1 !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03) !important;
 }
 
 .light input::placeholder,
@@ -184,11 +316,16 @@ body {
 .light input:focus,
 .light textarea:focus,
 .light select:focus {
-  border-color: #0df2c9 !important;
-  box-shadow: 0 0 0 2px rgba(13, 242, 201, 0.25) !important;
+  border-color: #00ddb8 !important;
+  box-shadow: 0 0 0 3px rgba(0, 221, 184, 0.2) !important;
 }
 
-/* 5. Borders in Light Mode */
+.light select option {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+/* 7. Borders in Light Mode */
 .light .border-\[\#162035\],
 .light .border-\[\#19233a\],
 .light .border-\[\#1c273e\],
@@ -200,14 +337,14 @@ body {
 .light .border-\[\#1e293b\],
 .light .border-slate-800,
 .light .border-slate-700 {
-  border-color: #e2e8f0 !important;
+  border-color: #cbd5e1 !important;
 }
 
 .light .border-\[\#22334d\]\/80 {
-  border-color: #e2e8f0 !important;
+  border-color: #cbd5e1 !important;
 }
 
-/* 6. Hover States in Light Mode */
+/* 8. Hover States in Light Mode */
 .light .hover\:bg-\[\#111827\]:hover,
 .light .hover\:bg-\[\#131b2e\]:hover,
 .light .hover\:bg-\[\#152037\]:hover,
@@ -219,10 +356,10 @@ body {
 .light .hover\:bg-\[\#25354e\]:hover,
 .light .hover\:bg-slate-800:hover,
 .light .hover\:bg-slate-900:hover {
-  background-color: #f1f5f9 !important;
+  background-color: #e8eef6 !important;
 }
 
-/* 7. Typography / Text Colors in Light Mode */
+/* 9. Typography / Text Colors in Light Mode */
 .light .text-white,
 .light .text-\[\#f8fafc\],
 .light .text-slate-100,
@@ -247,63 +384,53 @@ body {
 .light .bg-\[\#0df2c9\] .text-slate-950,
 .light .text-slate-950 {
   color: #020617 !important;
-}
-
-/* 8. Active Nav Link in Sidebar */
-.light nav a.text-\[\#0df2c9\].bg-\[\#152037\] {
-  background-color: #e6faf6 !important;
-  color: #008767 !important;
-  border-color: #0df2c9 !important;
-}
-
-/* 9. Top Header Backdrop */
-.light header.bg-\[\#090d16\]\/85 {
-  background-color: rgba(255, 255, 255, 0.9) !important;
-  border-color: #e2e8f0 !important;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05) !important;
+  font-weight: 800 !important;
 }
 
 /* 10. Modals & Dialogs */
 .light .bg-black\/80,
 .light .bg-black\/70 {
-  background-color: rgba(15, 23, 42, 0.45) !important;
+  background-color: rgba(15, 23, 42, 0.5) !important;
+  backdrop-filter: blur(4px) !important;
 }
 
 .light div[role="dialog"],
 .light .shadow-2xl.shadow-black\/80 {
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15) !important;
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25) !important;
 }
 
 /* 11. Soft Card Elevation in Light Mode */
 .light .shadow-sm {
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05) !important;
+  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.05) !important;
 }
 
 .light .shadow-md {
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.06), 0 2px 4px -2px rgba(0, 0, 0, 0.06) !important;
+  box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.07), 0 2px 4px -2px rgba(15, 23, 42, 0.05) !important;
 }
 
 .light .shadow-lg {
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.06), 0 4px 6px -4px rgba(0, 0, 0, 0.06) !important;
+  box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -4px rgba(15, 23, 42, 0.05) !important;
 }
 
 /* 12. Toast Notifications in Light Mode */
 .light .bg-\[\#0c1a24\] {
   background-color: #ffffff !important;
-  border-color: #0df2c9 !important;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1) !important;
+  border-color: #00ddb8 !important;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.15) !important;
 }
 
 .light .bg-\[\#1c1117\] {
   background-color: #ffffff !important;
   border-color: #ef4444 !important;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1) !important;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.15) !important;
 }
 
 .light .bg-\[\#141228\] {
   background-color: #ffffff !important;
   border-color: #8b5cf6 !important;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1) !important;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.15) !important;
 }
 
 /* 13. Light Mode Scrollbars */
@@ -329,7 +456,7 @@ body {
 .light .bg-\[\#1a233a\].text-\[\#94a3b8\] {
   background-color: #f1f5f9 !important;
   color: #475569 !important;
-  border-color: #e2e8f0 !important;
+  border-color: #cbd5e1 !important;
 }
 
 .light .bg-\[\#00f59b\]\/15,
@@ -338,8 +465,8 @@ body {
 .light .bg-\[\#0df2c9\]\/10,
 .light .bg-\[\#0df2c9\]\/20 {
   background-color: #e6faf6 !important;
-  color: #008767 !important;
-  border-color: rgba(13, 242, 201, 0.5) !important;
+  color: #007a60 !important;
+  border-color: rgba(0, 221, 184, 0.5) !important;
 }
 
 .light .bg-\[\#8b5cf6\]\/15,
@@ -371,9 +498,9 @@ body {
 
 /* 16. Table Styles in Light Mode */
 .light table thead tr {
-  background-color: #f8fafc !important;
-  border-color: #e2e8f0 !important;
-  color: #64748b !important;
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  color: #475569 !important;
 }
 
 .light .divide-\[\#1b273a\] > :not([hidden]) ~ :not([hidden]),
@@ -386,22 +513,25 @@ body {
   background-color: #f8fafc !important;
 }
 
-/* 17. Dropdowns & Select Option Elements */
-.light select option {
-  background-color: #ffffff !important;
+/* 17. Podium Blocks in Light Mode */
+.light .bg-gradient-to-t.from-\[\#111927\].to-\[\#1e2e46\] {
+  background: linear-gradient(to top, #fff4c2, #fffbeb) !important;
+  border-top: 4px solid #f59e0b !important;
+  border-color: #fde68a !important;
   color: #0f172a !important;
 }
 
-/* 18. Banner Gradients & Podium Blocks */
-.light .bg-gradient-to-r.from-\[\#111927\].via-\[\#142238\].to-\[\#0f172a\],
-.light .bg-gradient-to-r.from-\[\#0d3b42\].via-\[\#0e2738\].to-\[\#121927\] {
-  background-image: linear-gradient(to right, #e6faf6, #f0fdf9, #f8fafc) !important;
-  border-color: rgba(13, 242, 201, 0.4) !important;
-  box-shadow: 0 4px 20px -2px rgba(13, 242, 201, 0.1) !important;
+.light .bg-gradient-to-t.from-\[\#111927\].to-\[\#182334\] {
+  background: linear-gradient(to top, #eee9ff, #f5f3ff) !important;
+  border-top: 3px solid #8b5cf6 !important;
+  border-color: #ddd6fe !important;
+  color: #0f172a !important;
 }
 
+/* 18. Other Modal & Card Gradients */
 .light .bg-gradient-to-br.from-\[\#101726\].to-\[\#0c1220\] {
   background-image: linear-gradient(to bottom right, #ffffff, #f8fafc) !important;
+  border-color: #cbd5e1 !important;
 }
 
 .light .bg-gradient-to-br.from-\[\#1b123d\].via-\[\#120d2c\].to-\[\#090717\] {
@@ -411,15 +541,7 @@ body {
 
 .light .bg-gradient-to-r.from-\[\#111927\].via-\[\#162032\].to-\[\#111927\] {
   background-image: linear-gradient(to right, #f8fafc, #f1f5f9, #f8fafc) !important;
-}
-
-.light .bg-gradient-to-t.from-\[\#111927\].to-\[\#182334\],
-.light .bg-gradient-to-t.from-\[\#111927\].to-\[\#1e2e46\] {
-  background-image: linear-gradient(to top, #f1f5f9, #ffffff) !important;
-}
-
-.light .bg-gradient-to-r.from-white.via-slate-100.to-\[\#0df2c9\] {
-  background-image: linear-gradient(to right, #0f172a, #008767) !important;
+  border-color: #cbd5e1 !important;
 }
 
 /* 19. Enhanced Light Mode Text Contrast */
@@ -442,6 +564,20 @@ body {
 .light .text-purple-400 {
   color: #581c87 !important;
 }
+
+/* 20. Quick Match Secondary Button & Outlines */
+.light button.bg-\[\#1b273a\] {
+  background-color: #edf2f7 !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+.light button.bg-\[\#1b273a\]:hover {
+  background-color: #e2e8f0 !important;
+  border-color: #00ddb8 !important;
+  color: #0f172a !important;
+}
+
 
 
 
