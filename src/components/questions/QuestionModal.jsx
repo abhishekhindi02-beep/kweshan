@@ -1,7 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { Sparkles, CheckCircle2, AlertCircle, Save, Send, ShieldCheck, HelpCircle, Loader2 } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  Sparkles, CheckCircle2, AlertCircle, Save, Send, 
+  HelpCircle, Image as ImageIcon, PenTool, Sigma, 
+  Trash2, X, Plus, BookOpen, Check, Award
+} from 'lucide-react';
 import Modal from '../common/Modal';
 import Badge from '../common/Badge';
+import DrawingCanvasModal from './DrawingCanvasModal';
 import { evaluateQuestionQuality } from '../../services/qualityScorer';
 import { useGame } from '../../context/GameContext';
 import { useAuth } from '../../context/AuthContext';
@@ -10,18 +15,28 @@ import { useToast } from '../../context/ToastContext';
 export default function QuestionModal({ isOpen, onClose, question = null }) {
   const { createQuestion, updateQuestion, decks } = useGame();
   const { user, currentUser } = useAuth();
-  const effectiveUser = currentUser || user || { id: 'user_1', name: 'Kianna Torff' };
+  const effectiveUser = currentUser || user || { id: 'user_1', name: 'Dr. Elena Rostova' };
   const { showToast, addToast } = useToast();
 
+  const fileInputRef = useRef(null);
+
+  // Form State
   const [deckId, setDeckId] = useState('deck_1');
   const [topic, setTopic] = useState('');
+  const [difficulty, setDifficulty] = useState('Medium');
   const [prompt, setPrompt] = useState('');
-  const [options, setOptions] = useState(['', '', '', '']);
-  const [correctIndex, setCorrectIndex] = useState(0);
   const [explanation, setExplanation] = useState('');
   const [citation, setCitation] = useState('');
-  const [difficulty, setDifficulty] = useState('Medium');
-  const [tags, setTags] = useState('General, Competitive');
+  const [tags, setTags] = useState('Academic, Long-form');
+
+  // Attachments State
+  const [image, setImage] = useState(null);
+  const [drawing, setDrawing] = useState(null);
+  const [equations, setEquations] = useState([]);
+  const [equationInput, setEquationInput] = useState('');
+  const [showEquationInput, setShowEquationInput] = useState(false);
+  const [isDrawingModalOpen, setIsDrawingModalOpen] = useState(false);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationErrors, setValidationErrors] = useState({});
 
@@ -29,103 +44,106 @@ export default function QuestionModal({ isOpen, onClose, question = null }) {
     if (question) {
       setDeckId(question.deckId || 'deck_1');
       setTopic(question.topic || '');
+      setDifficulty(question.difficulty || 'Medium');
       setPrompt(question.prompt || question.text || '');
-      
-      // Extract string options
-      const rawOpts = question.options || ['', '', '', ''];
-      const stringOpts = rawOpts.map((o) => (typeof o === 'string' ? o : o.text || ''));
-      while (stringOpts.length < 4) stringOpts.push('');
-      setOptions(stringOpts.slice(0, 4));
-      
-      const correctIdx = typeof question.correctAnswerIndex === 'number'
-        ? question.correctAnswerIndex
-        : (typeof question.correctIndex === 'number' ? question.correctIndex : 0);
-      setCorrectIndex(correctIdx);
-
       setExplanation(question.explanation || '');
       setCitation(question.citation || question.citations || '');
-      setDifficulty(question.difficulty || 'Medium');
-      setTags(Array.isArray(question.tags) ? question.tags.join(', ') : (question.tags || ''));
+      setTags(Array.isArray(question.tags) ? question.tags.join(', ') : (question.tags || 'Academic, Long-form'));
+      setImage(question.image || question.imageUrl || null);
+      setDrawing(question.drawing || question.figure || null);
+      setEquations(Array.isArray(question.equations) ? question.equations : (question.equation ? [question.equation] : []));
       setValidationErrors({});
       setIsSubmitting(false);
     } else {
       setDeckId(decks[0]?.id || 'deck_1');
       setTopic('');
+      setDifficulty('Medium');
       setPrompt('');
-      setOptions(['', '', '', '']);
-      setCorrectIndex(0);
       setExplanation('');
       setCitation('');
-      setDifficulty('Medium');
-      setTags('General, Competitive');
+      setTags('Academic, Long-form');
+      setImage(null);
+      setDrawing(null);
+      setEquations([]);
+      setEquationInput('');
+      setShowEquationInput(false);
       setValidationErrors({});
       setIsSubmitting(false);
     }
   }, [question, isOpen, decks]);
 
-  // Live quality score calculation
+  // Live quality score calculation for long-form question
   const currentQData = {
     prompt,
     text: prompt,
-    options,
     explanation,
     citation,
     citations: citation,
     difficulty,
+    image,
+    drawing,
+    equations,
     tags: tags.split(',').map((t) => t.trim()).filter(Boolean)
   };
   const liveScore = evaluateQuestionQuality(currentQData);
 
-  const handleOptionChange = (idx, val) => {
-    const next = [...options];
-    next[idx] = val;
-    setOptions(next);
-    if (validationErrors[`option_${idx}`]) {
-      setValidationErrors((prev) => ({ ...prev, [`option_${idx}`]: false }));
+  // Handle Image File Upload
+  const handleImageUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 3 * 1024 * 1024) {
+      if (showToast) showToast('Image file size exceeds 3MB limit.', 'error');
+      return;
     }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setImage(reader.result);
+      if (showToast) showToast('Figure image attached successfully.', 'success');
+    };
+    reader.readAsDataURL(file);
   };
+
+  // Add Equation to list
+  const handleAddEquation = () => {
+    if (!equationInput.trim()) return;
+    setEquations((prev) => [...prev, equationInput.trim()]);
+    setEquationInput('');
+    setShowEquationInput(false);
+  };
+
+  const insertSymbol = (sym) => {
+    setEquationInput((prev) => prev + sym);
+  };
+
+  const symbols = ['²', '³', '√', 'π', 'θ', 'Δ', '∫', '±', 'α', 'β', 'λ', 'μ', 'Σ', '∞', '→', '⇌'];
 
   const handlePublish = (targetStatus = 'Live') => {
     if (isSubmitting) return;
 
     const errors = {};
-
     if (!prompt.trim()) {
-      errors.prompt = 'Question prompt is required.';
+      errors.prompt = 'Long-form question prompt is required.';
     }
-
-    options.forEach((opt, i) => {
-      if (!opt.trim()) {
-        errors[`option_${i}`] = `Option ${String.fromCharCode(65 + i)} cannot be empty.`;
-      }
-    });
-
-    if (correctIndex === null || correctIndex === undefined || correctIndex < 0 || correctIndex > 3) {
-      errors.correct = 'Please select a correct answer option.';
-    }
-
     if (!explanation.trim()) {
-      errors.explanation = 'Please provide a solution and explanation.';
+      errors.explanation = 'Please provide a solution, derivation, or canonical explanation.';
     }
 
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
       const firstError = Object.values(errors)[0];
-      if (showToast) {
-        showToast(firstError, 'error');
-      } else if (addToast) {
-        addToast({ title: 'Validation Error', message: firstError, type: 'error' });
-      }
+      if (showToast) showToast(firstError, 'error');
       return;
     }
 
-    // Clear validation errors
     setValidationErrors({});
     setIsSubmitting(true);
 
     const selectedDeck = decks.find((d) => d.id === deckId) || decks[0] || {
       id: 'deck_1',
-      title: 'AP Physics 1: Mechanics'
+      title: 'AP Physics 1: Mechanics',
+      category: 'Science'
     };
 
     const finalTopic = topic.trim() || prompt.trim().slice(0, 45) + '...';
@@ -137,9 +155,6 @@ export default function QuestionModal({ isOpen, onClose, question = null }) {
       topic: finalTopic,
       prompt: prompt.trim(),
       text: prompt.trim(),
-      options: options.map((o) => o.trim()),
-      correctAnswerIndex: Number(correctIndex),
-      correctIndex: Number(correctIndex),
       explanation: explanation.trim(),
       citation: citation.trim(),
       citations: citation.trim(),
@@ -147,376 +162,482 @@ export default function QuestionModal({ isOpen, onClose, question = null }) {
       tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
       status: targetStatus,
       authorId: effectiveUser.id,
-      authorName: effectiveUser.name || 'Kianna Torff'
+      authorName: effectiveUser.name || 'Scholar',
+      image,
+      drawing,
+      equations,
+      qualityScores: liveScore
     };
 
     try {
       if (question?.id) {
         updateQuestion(question.id, payload);
-        if (showToast) {
-          showToast(`Question updated successfully (${targetStatus})!`, 'success');
-        }
+        if (showToast) showToast(`Question updated successfully (${targetStatus})!`, 'success');
       } else {
         createQuestion(payload);
         if (showToast) {
           if (targetStatus === 'Live') {
-            showToast('Question published successfully! +30 DP earned.', 'success');
+            showToast('Long-form question published successfully! +30 DP earned.', 'success');
           } else if (targetStatus === 'Pending Review') {
-            showToast('Question submitted for review.', 'info');
+            showToast('Question submitted for peer review.', 'info');
           } else {
             showToast('Draft saved successfully.', 'success');
           }
         }
       }
 
-      // Reset state and close modal
       setIsSubmitting(false);
       onClose();
     } catch (err) {
-      console.error('Failed to publish question', err);
+      console.error('Failed to save long-form question', err);
       setIsSubmitting(false);
-      if (showToast) showToast('Unable to publish the question. Please try again.', 'error');
+      if (showToast) showToast('Unable to save the question. Please try again.', 'error');
     }
   };
 
   const handleSaveDraft = () => {
-    if (isSubmitting) return;
-
-    const selectedDeck = decks.find((d) => d.id === deckId) || decks[0] || { id: 'deck_1', title: 'Academic Deck' };
-    const finalPrompt = prompt.trim() || 'Untitled Draft Question';
-    const finalTopic = topic.trim() || 'Draft Concept';
-
-    const payload = {
-      deckId: selectedDeck.id,
-      deckName: selectedDeck.title,
-      category: selectedDeck.category || 'Science',
-      topic: finalTopic,
-      prompt: finalPrompt,
-      text: finalPrompt,
-      options: options.map((o) => o.trim()),
-      correctAnswerIndex: Number(correctIndex),
-      correctIndex: Number(correctIndex),
-      explanation: explanation.trim(),
-      citation: citation.trim(),
-      citations: citation.trim(),
-      difficulty,
-      tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
-      status: 'Draft',
-      authorId: effectiveUser.id,
-      authorName: effectiveUser.name || 'Kianna Torff'
-    };
-
-    if (question?.id) {
-      updateQuestion(question.id, payload);
-    } else {
-      createQuestion(payload);
-    }
-
-    if (showToast) showToast('Draft saved successfully.', 'success');
-    onClose();
+    handlePublish('Draft');
   };
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={question ? 'Edit Question' : 'Author New Competition Question'}
-      maxWidth="max-w-4xl"
-    >
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left 2 Cols: Question Form */}
-        <div className="lg:col-span-2 space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-                Deck / Topic *
-              </label>
-              <select
-                value={deckId}
-                onChange={(e) => setDeckId(e.target.value)}
-                className="w-full bg-[#111927] border border-[#22334d] rounded-xl px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-[#0df2c9]"
-              >
-                {decks.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.title}
-                  </option>
-                ))}
-              </select>
+    <>
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        title={question ? 'Edit Long-Form Question' : 'Author Long-Form Question'}
+        subtitle="Write academic problems with attached figures, freehand diagrams, and equations"
+        maxWidth="max-w-4xl"
+      >
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left 2 Cols: Form Content */}
+          <div className="lg:col-span-2 space-y-4">
+            {/* 1. Deck, Topic & Difficulty */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                  Deck / Topic *
+                </label>
+                <select
+                  value={deckId}
+                  onChange={(e) => setDeckId(e.target.value)}
+                  className="w-full bg-[#111927] border border-[#22334d] rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-[#0df2c9]"
+                >
+                  {decks.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                  Difficulty Level *
+                </label>
+                <select
+                  value={difficulty}
+                  onChange={(e) => setDifficulty(e.target.value)}
+                  className="w-full bg-[#111927] border border-[#22334d] rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-[#0df2c9]"
+                >
+                  <option value="Easy">Easy</option>
+                  <option value="Medium">Medium</option>
+                  <option value="Hard">Hard</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                  Concept / Subtopic
+                </label>
+                <input
+                  type="text"
+                  value={topic}
+                  onChange={(e) => setTopic(e.target.value)}
+                  placeholder="e.g. Newton's Second Law"
+                  className="w-full bg-[#111927] border border-[#22334d] rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-[#0df2c9]"
+                />
+              </div>
             </div>
 
+            {/* 2. Long-Form Question Prompt */}
             <div>
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-                Difficulty Level *
-              </label>
-              <select
-                value={difficulty}
-                onChange={(e) => setDifficulty(e.target.value)}
-                className="w-full bg-[#111927] border border-[#22334d] rounded-xl px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-[#0df2c9]"
-              >
-                <option value="Easy">Easy (Foundation)</option>
-                <option value="Medium">Medium (Standard Competition)</option>
-                <option value="Hard">Hard (Grandmaster Rank)</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-              Concept Subtopic (Optional)
-            </label>
-            <input
-              type="text"
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-              placeholder="e.g. Rotational Inertia, Cell Division, Gibbs Energy..."
-              className="w-full bg-[#111927] border border-[#22334d] rounded-xl px-3.5 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-[#0df2c9]"
-            />
-          </div>
-
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                Question Prompt *
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                  Academic Question Prompt *
+                </label>
+                <span className="text-[10px] font-mono text-slate-500">
+                  {prompt.length} chars
+                </span>
+              </div>
+              <textarea
+                rows={4}
+                value={prompt}
+                onChange={(e) => {
+                  setPrompt(e.target.value);
+                  if (validationErrors.prompt) {
+                    setValidationErrors((prev) => ({ ...prev, prompt: false }));
+                  }
+                }}
+                placeholder="Write your long-form academic question in detail. e.g. 'Explain how Newton's second law can be used to determine the acceleration of an object when multiple non-orthogonal forces act on it. Derive the net vector sum equation...'"
+                className={`w-full bg-[#0b101b] border rounded-2xl p-3.5 text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-[#0df2c9] transition-colors leading-relaxed ${
+                  validationErrors.prompt ? 'border-rose-500/80' : 'border-[#22334d]'
+                }`}
+              />
               {validationErrors.prompt && (
-                <span className="text-[11px] text-rose-400 font-medium flex items-center gap-1">
+                <p className="text-[11px] text-rose-400 mt-1 flex items-center gap-1">
                   <AlertCircle className="w-3 h-3" />
                   {validationErrors.prompt}
+                </p>
+              )}
+            </div>
+
+            {/* 3. Attachments Action Toolbar */}
+            <div className="p-3 bg-[#111927] border border-[#22334d] rounded-2xl space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-[#0df2c9]" />
+                  Attachments & Scientific Artifacts
                 </span>
-              )}
-            </div>
-            <textarea
-              rows={3}
-              value={prompt}
-              onChange={(e) => {
-                setPrompt(e.target.value);
-                if (validationErrors.prompt) setValidationErrors((prev) => ({ ...prev, prompt: null }));
-              }}
-              placeholder="e.g. Which phase of the cell cycle is characterized by the division of the nucleus into two genetically identical nuclei?"
-              className={`w-full bg-[#111927] border rounded-xl p-3.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none transition-all ${
-                validationErrors.prompt ? 'border-rose-500 ring-1 ring-rose-500' : 'border-[#22334d] focus:border-[#0df2c9]'
-              }`}
-            />
-          </div>
+                <span className="text-[10px] font-mono text-slate-500">Optional Visuals</span>
+              </div>
 
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                4 Multiple Choice Options (Select exactly one correct answer) *
-              </label>
-              {validationErrors.correct && (
-                <span className="text-[11px] text-rose-400 font-medium">{validationErrors.correct}</span>
-              )}
-            </div>
-            <div className="space-y-2.5">
-              {options.map((opt, idx) => {
-                const labelLetter = String.fromCharCode(65 + idx);
-                const isSelected = correctIndex === idx;
-                const hasError = validationErrors[`option_${idx}`];
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Add Image Button */}
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleImageUpload}
+                  accept="image/*"
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="px-3 py-1.5 rounded-xl bg-[#0b101b] hover:bg-[#1a233a] border border-[#22334d] hover:border-[#0df2c9]/50 text-xs font-semibold text-slate-200 flex items-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <ImageIcon className="w-3.5 h-3.5 text-[#0df2c9]" />
+                  {image ? 'Change Image' : 'Add Image'}
+                </button>
 
-                return (
-                  <div
-                    key={idx}
-                    className={`flex items-center gap-3 p-2 rounded-xl border transition-all ${
-                      hasError
-                        ? 'border-rose-500/80 bg-rose-500/10'
-                        : isSelected
-                        ? 'bg-[#0df2c9]/10 border-[#0df2c9]/50 shadow-sm shadow-[#0df2c9]/10'
-                        : 'bg-[#111927] border-[#22334d]'
-                    }`}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => setCorrectIndex(idx)}
-                      title={`Select ${labelLetter} as correct answer`}
-                      className={`w-8 h-8 rounded-lg font-bold text-xs flex items-center justify-center transition-all cursor-pointer ${
-                        isSelected
-                          ? 'bg-[#0df2c9] text-slate-950 font-black shadow-md shadow-[#0df2c9]/30'
-                          : 'bg-[#1b273a] text-slate-400 hover:text-white hover:bg-[#25354e]'
-                      }`}
-                    >
-                      {labelLetter}
-                    </button>
+                {/* Draw Figure Button */}
+                <button
+                  type="button"
+                  onClick={() => setIsDrawingModalOpen(true)}
+                  className="px-3 py-1.5 rounded-xl bg-[#0b101b] hover:bg-[#1a233a] border border-[#22334d] hover:border-[#38bdf8]/50 text-xs font-semibold text-slate-200 flex items-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <PenTool className="w-3.5 h-3.5 text-[#38bdf8]" />
+                  {drawing ? 'Edit Drawing' : 'Draw Figure'}
+                </button>
+
+                {/* Add Equation Button */}
+                <button
+                  type="button"
+                  onClick={() => setShowEquationInput(!showEquationInput)}
+                  className="px-3 py-1.5 rounded-xl bg-[#0b101b] hover:bg-[#1a233a] border border-[#22334d] hover:border-amber-400/50 text-xs font-semibold text-slate-200 flex items-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <Sigma className="w-3.5 h-3.5 text-amber-400" />
+                  Add Equation
+                </button>
+              </div>
+
+              {/* Equation Input Tray */}
+              {showEquationInput && (
+                <div className="p-3 bg-[#0b101b] border border-[#22334d] rounded-xl space-y-2 animate-fadeIn">
+                  <div className="flex items-center gap-2">
                     <input
                       type="text"
-                      value={opt}
-                      onChange={(e) => handleOptionChange(idx, e.target.value)}
-                      placeholder={`Option ${labelLetter}...`}
-                      className="flex-1 bg-transparent text-sm text-slate-200 placeholder-slate-500 focus:outline-none"
+                      value={equationInput}
+                      onChange={(e) => setEquationInput(e.target.value)}
+                      placeholder="e.g. F = ma, E = mc², v = u + at, ΣF = m·a"
+                      className="flex-1 bg-[#111927] border border-[#22334d] rounded-lg px-3 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-[#0df2c9]"
                     />
-                    {isSelected && (
-                      <span className="text-[10px] uppercase font-bold text-[#0df2c9] px-2 py-0.5 bg-[#0df2c9]/20 rounded-md border border-[#0df2c9]/30 flex items-center gap-1">
-                        <CheckCircle2 className="w-3 h-3" />
-                        Correct
-                      </span>
+                    <button
+                      type="button"
+                      onClick={handleAddEquation}
+                      className="px-3 py-1.5 bg-[#0df2c9] hover:bg-[#00e1ba] text-slate-950 font-bold text-xs rounded-lg cursor-pointer"
+                    >
+                      Attach
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowEquationInput(false)}
+                      className="p-1.5 text-slate-400 hover:text-white cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* Math Symbols Helper Bar */}
+                  <div className="flex flex-wrap items-center gap-1 pt-1">
+                    <span className="text-[10px] text-slate-500 font-mono mr-1">Symbols:</span>
+                    {symbols.map((sym) => (
+                      <button
+                        key={sym}
+                        type="button"
+                        onClick={() => insertSymbol(sym)}
+                        className="px-2 py-0.5 rounded bg-[#111927] hover:bg-[#1f2d47] text-slate-300 font-mono text-xs border border-[#22334d] cursor-pointer"
+                      >
+                        {sym}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Attached Items Previews */}
+              {(image || drawing || equations.length > 0) && (
+                <div className="pt-2 border-t border-[#1b273a] space-y-2">
+                  <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">
+                    Attached Artifacts:
+                  </span>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {/* Attached Image Preview */}
+                    {image && (
+                      <div className="relative p-2 bg-[#0b101b] border border-[#22334d] rounded-xl flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 overflow-hidden">
+                          <img src={image} alt="Uploaded" className="w-10 h-10 object-cover rounded-lg flex-shrink-0" />
+                          <span className="text-xs text-slate-300 truncate">Figure Image</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setImage(null)}
+                          className="p-1 text-slate-400 hover:text-rose-400 cursor-pointer"
+                          title="Remove image"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Attached Drawing Preview */}
+                    {drawing && (
+                      <div className="relative p-2 bg-[#0b101b] border border-[#22334d] rounded-xl flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 overflow-hidden">
+                          <img src={drawing} alt="Diagram" className="w-10 h-10 object-contain bg-[#090d16] rounded-lg flex-shrink-0" />
+                          <span className="text-xs text-slate-300 truncate">Hand-Drawn Figure</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => setIsDrawingModalOpen(true)}
+                            className="p-1 text-slate-400 hover:text-[#38bdf8] cursor-pointer"
+                            title="Edit drawing"
+                          >
+                            <PenTool className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDrawing(null)}
+                            className="p-1 text-slate-400 hover:text-rose-400 cursor-pointer"
+                            title="Remove drawing"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
                     )}
                   </div>
-                );
-              })}
-            </div>
-          </div>
 
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                Solution & Explanation *
-              </label>
-              {validationErrors.explanation && (
-                <span className="text-[11px] text-rose-400 font-medium flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" />
-                  {validationErrors.explanation}
-                </span>
+                  {/* Attached Equations Pills */}
+                  {equations.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {equations.map((eq, i) => (
+                        <span
+                          key={i}
+                          className="px-2.5 py-1 rounded-lg bg-[#0b101b] border border-[#0df2c9]/30 text-[#0df2c9] text-xs font-mono flex items-center gap-1.5"
+                        >
+                          <span>{eq}</span>
+                          <button
+                            type="button"
+                            onClick={() => setEquations(equations.filter((_, idx) => idx !== i))}
+                            className="text-slate-500 hover:text-rose-400 cursor-pointer"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
               )}
             </div>
-            <textarea
-              rows={2}
-              value={explanation}
-              onChange={(e) => {
-                setExplanation(e.target.value);
-                if (validationErrors.explanation) setValidationErrors((prev) => ({ ...prev, explanation: null }));
-              }}
-              placeholder="Explain the step-by-step conceptual derivation to boost question quality..."
-              className={`w-full bg-[#111927] border rounded-xl p-3 text-sm text-slate-200 placeholder-slate-500 focus:outline-none transition-all ${
-                validationErrors.explanation ? 'border-rose-500 ring-1 ring-rose-500' : 'border-[#22334d] focus:border-[#0df2c9]'
-              }`}
-            />
-          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* 4. Long-Form Solution & Derivation */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                  Solution, Proof & Explanation *
+                </label>
+                <span className="text-[10px] font-mono text-slate-500">
+                  {explanation.length} chars
+                </span>
+              </div>
+              <textarea
+                rows={4}
+                value={explanation}
+                onChange={(e) => {
+                  setExplanation(e.target.value);
+                  if (validationErrors.explanation) {
+                    setValidationErrors((prev) => ({ ...prev, explanation: false }));
+                  }
+                }}
+                placeholder="Provide a comprehensive academic explanation, derivation, or canonical solution proving the principle..."
+                className={`w-full bg-[#0b101b] border rounded-2xl p-3.5 text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-[#0df2c9] transition-colors leading-relaxed ${
+                  validationErrors.explanation ? 'border-rose-500/80' : 'border-[#22334d]'
+                }`}
+              />
+              {validationErrors.explanation && (
+                <p className="text-[11px] text-rose-400 mt-1 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  {validationErrors.explanation}
+                </p>
+              )}
+            </div>
+
+            {/* 5. Reference / Citation */}
             <div>
               <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-                Academic Citation / Reference
+                Academic Reference / Citation (Optional)
               </label>
               <input
                 type="text"
                 value={citation}
                 onChange={(e) => setCitation(e.target.value)}
-                placeholder="e.g. Campbell Biology 12th Ed, Ch. 13"
-                className="w-full bg-[#111927] border border-[#22334d] rounded-xl px-3.5 py-2.5 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-[#0df2c9]"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-                Tags (Comma separated)
-              </label>
-              <input
-                type="text"
-                value={tags}
-                onChange={(e) => setTags(e.target.value)}
-                placeholder="Genetics, Mitosis, Bio101"
-                className="w-full bg-[#111927] border border-[#22334d] rounded-xl px-3.5 py-2.5 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-[#0df2c9]"
+                placeholder="e.g. Halliday, Resnick, & Walker — Fundamentals of Physics (11th Ed., Ch. 5)"
+                className="w-full bg-[#0b101b] border border-[#22334d] rounded-xl px-3.5 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-[#0df2c9]"
               />
             </div>
           </div>
-        </div>
 
-        {/* Right 1 Col: Live Quality Inspector */}
-        <div className="bg-[#111927] border border-[#22334d] rounded-2xl p-5 flex flex-col justify-between space-y-6">
+          {/* Right 1 Col: Quality Score & Guidelines */}
           <div className="space-y-4">
-            <div className="flex items-center justify-between border-b border-[#22334d] pb-3">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-[#0df2c9]" />
-                <h4 className="text-sm font-bold text-white uppercase tracking-wider">Quality Engine</h4>
+            {/* Live Quality Engine Rating Card */}
+            <div className="bg-[#111927] border border-[#22334d] rounded-2xl p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-[#0df2c9]" />
+                  Quality Score
+                </span>
+                <span className="text-xs font-extrabold text-[#0df2c9] font-mono">
+                  {liveScore.composite}/100 ({liveScore.grade})
+                </span>
               </div>
-              <Badge variant={liveScore.overall >= 80 ? 'mint' : liveScore.overall >= 60 ? 'warning' : 'danger'}>
-                {liveScore.status}
-              </Badge>
-            </div>
 
-            <div className="text-center py-2">
-              <div className="text-4xl font-extrabold text-white font-mono">{liveScore.overall}</div>
-              <div className="text-xs text-slate-400 font-medium">Quality Score / 100 ({liveScore.grade})</div>
-              <div className="w-full bg-[#1b273a] h-2 rounded-full overflow-hidden mt-3">
+              {/* Progress Bar */}
+              <div className="w-full h-2 rounded-full bg-[#0b101b] overflow-hidden">
                 <div
-                  className={`h-full transition-all duration-300 ${
-                    liveScore.overall >= 80 ? 'bg-[#0df2c9]' : liveScore.overall >= 60 ? 'bg-amber-400' : 'bg-rose-500'
-                  }`}
-                  style={{ width: `${liveScore.overall}%` }}
+                  className="h-full bg-gradient-to-r from-[#0df2c9] to-[#8b5cf6] transition-all duration-300"
+                  style={{ width: `${liveScore.composite}%` }}
                 />
               </div>
-            </div>
 
-            <div className="space-y-2.5 pt-2 text-xs">
-              <div className="flex justify-between items-center text-slate-300">
-                <span>Originality (20%)</span>
-                <span className="font-mono font-bold text-white">{liveScore.breakdown.originality}/20</span>
-              </div>
-              <div className="flex justify-between items-center text-slate-300">
-                <span>Factual Precision (25%)</span>
-                <span className="font-mono font-bold text-white">{liveScore.breakdown.factual}/25</span>
-              </div>
-              <div className="flex justify-between items-center text-slate-300">
-                <span>Distinction Ratio (20%)</span>
-                <span className="font-mono font-bold text-white">{liveScore.breakdown.distinction}/20</span>
-              </div>
-              <div className="flex justify-between items-center text-slate-300">
-                <span>Difficulty Calib. (20%)</span>
-                <span className="font-mono font-bold text-white">{liveScore.breakdown.difficulty}/20</span>
-              </div>
-              <div className="flex justify-between items-center text-slate-300">
-                <span>Academic Citations (15%)</span>
-                <span className="font-mono font-bold text-white">{liveScore.breakdown.citations}/15</span>
-              </div>
-            </div>
-
-            {liveScore.suggestions?.length > 0 && (
-              <div className="bg-[#0b101b] p-3 rounded-xl border border-amber-500/20 text-xs text-amber-200 space-y-1">
-                <div className="font-bold flex items-center gap-1">
-                  <AlertCircle className="w-3.5 h-3.5 text-amber-400" />
-                  Suggestions to reach 80+:
+              {/* Breakdown metrics */}
+              <div className="space-y-1.5 text-[11px] pt-1">
+                <div className="flex justify-between text-slate-400">
+                  <span>Question Depth:</span>
+                  <span className="font-mono text-slate-200">{liveScore.originality}%</span>
                 </div>
-                <ul className="list-disc list-inside space-y-0.5 text-slate-400 text-[11px]">
-                  {liveScore.suggestions.map((sug, i) => (
-                    <li key={i}>{sug}</li>
-                  ))}
-                </ul>
+                <div className="flex justify-between text-slate-400">
+                  <span>Solution Rigor:</span>
+                  <span className="font-mono text-slate-200">{liveScore.factualVerification}%</span>
+                </div>
+                <div className="flex justify-between text-slate-400">
+                  <span>Difficulty Balance:</span>
+                  <span className="font-mono text-slate-200">{liveScore.difficultyBalance}%</span>
+                </div>
+                <div className="flex justify-between text-slate-400">
+                  <span>Scientific Figures:</span>
+                  <span className="font-mono text-slate-200">{liveScore.answerDistinction}%</span>
+                </div>
+                <div className="flex justify-between text-slate-400">
+                  <span>Source Citations:</span>
+                  <span className="font-mono text-slate-200">{liveScore.sourceCitations}%</span>
+                </div>
               </div>
-            )}
-          </div>
 
-          <div className="space-y-2 pt-4 border-t border-[#22334d]">
-            <button
-              type="button"
-              disabled={isSubmitting}
-              onClick={() => handlePublish('Live')}
-              className="w-full py-3 px-4 bg-gradient-to-r from-[#0df2c9] to-[#00bfa5] text-slate-950 font-black rounded-xl text-xs hover:shadow-lg hover:shadow-[#0df2c9]/30 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin text-slate-950" />
-                  <span>Publishing...</span>
-                </>
-              ) : (
-                <>
-                  <ShieldCheck className="w-4 h-4" />
-                  <span>Direct Publish & Earn +30 DP</span>
-                </>
+              {/* Recommendations */}
+              {liveScore.recommendations.length > 0 && (
+                <div className="p-2.5 bg-[#0b101b] border border-[#1f2d47] rounded-xl space-y-1 text-[11px] text-slate-400">
+                  <span className="font-bold text-amber-400 block">💡 Tips to boost DP:</span>
+                  <ul className="list-disc list-inside space-y-0.5 text-slate-300 text-[10px]">
+                    {liveScore.recommendations.slice(0, 2).map((r, i) => (
+                      <li key={i}>{r}</li>
+                    ))}
+                  </ul>
+                </div>
               )}
-            </button>
+            </div>
 
-            <button
-              type="button"
-              disabled={isSubmitting}
-              onClick={() => handlePublish('Pending Review')}
-              className="w-full py-2.5 px-4 bg-[#1b273a] hover:bg-[#25354e] text-slate-200 font-semibold rounded-xl text-xs border border-[#2e4363] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-            >
-              <Send className="w-3.5 h-3.5 text-[#0df2c9]" />
-              <span>Submit for Review</span>
-            </button>
+            {/* Authoring Guidelines */}
+            <div className="bg-[#111927] border border-[#22334d] rounded-2xl p-4 space-y-2 text-xs text-slate-400">
+              <h4 className="font-bold text-slate-300">Authoring Standards</h4>
+              <ul className="space-y-1.5 text-[11px]">
+                <li className="flex items-start gap-1.5">
+                  <Check className="w-3.5 h-3.5 text-[#0df2c9] flex-shrink-0 mt-0.5" />
+                  <span>Use precise academic terminology and units.</span>
+                </li>
+                <li className="flex items-start gap-1.5">
+                  <Check className="w-3.5 h-3.5 text-[#0df2c9] flex-shrink-0 mt-0.5" />
+                  <span>Attach diagrams or formulas for complex models.</span>
+                </li>
+                <li className="flex items-start gap-1.5">
+                  <Check className="w-3.5 h-3.5 text-[#0df2c9] flex-shrink-0 mt-0.5" />
+                  <span>Direct live publication yields +30 DP instant royalties.</span>
+                </li>
+              </ul>
+            </div>
 
-            <button
-              type="button"
-              disabled={isSubmitting}
-              onClick={handleSaveDraft}
-              className="w-full py-2 px-4 bg-transparent hover:bg-slate-800/50 text-slate-400 hover:text-slate-200 text-xs rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
-            >
-              <Save className="w-3.5 h-3.5" />
-              <span>Save as Draft</span>
-            </button>
+            {/* Action Buttons Stack */}
+            <div className="space-y-2 pt-2">
+              <button
+                type="button"
+                onClick={() => handlePublish('Live')}
+                disabled={isSubmitting}
+                className="w-full py-3 bg-gradient-to-r from-[#0df2c9] to-[#00bfa5] text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl hover:shadow-lg hover:shadow-[#0df2c9]/30 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md disabled:opacity-50"
+              >
+                <Award className="w-4 h-4 fill-slate-950" />
+                Publish Live (+30 DP)
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handlePublish('Pending Review')}
+                disabled={isSubmitting}
+                className="w-full py-2.5 bg-[#1b273a] hover:bg-[#25354e] text-white font-bold text-xs rounded-xl border border-[#2e4363] hover:border-[#0df2c9]/50 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <Send className="w-3.5 h-3.5 text-[#0df2c9]" />
+                Submit for Peer Review
+              </button>
+
+              <div className="flex items-center gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={handleSaveDraft}
+                  className="flex-1 py-2 bg-[#111927] hover:bg-[#1a233a] text-slate-300 text-xs font-semibold rounded-xl border border-[#22334d] transition-colors cursor-pointer"
+                >
+                  Save Draft
+                </button>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-2 bg-transparent hover:bg-[#111927] text-slate-400 hover:text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    </Modal>
+      </Modal>
+
+      {/* Freehand Drawing Modal */}
+      <DrawingCanvasModal
+        isOpen={isDrawingModalOpen}
+        onClose={() => setIsDrawingModalOpen(false)}
+        initialDrawing={drawing}
+        onSave={(dataUrl) => setDrawing(dataUrl)}
+      />
+    </>
   );
 }

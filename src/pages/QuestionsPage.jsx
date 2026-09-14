@@ -1,10 +1,10 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useLocation, useParams, useNavigate } from 'react-router-dom';
-import { Plus, Search, Filter, Sparkles, CheckCircle2, Clock, FileText, BarChart2 } from 'lucide-react';
+import { Plus, Search, Filter, Sparkles, CheckCircle2, Clock, FileText, BookOpen } from 'lucide-react';
 import QualityDashboard from '../components/questions/QualityDashboard';
 import QuestionCard from '../components/questions/QuestionCard';
 import QuestionModal from '../components/questions/QuestionModal';
-import QuestionAnalyticsModal from '../components/questions/QuestionAnalyticsModal';
+import QuestionDetailModal from '../components/questions/QuestionDetailModal';
 import Badge from '../components/common/Badge';
 import { useGame } from '../context/GameContext';
 import { useAuth } from '../context/AuthContext';
@@ -13,36 +13,30 @@ import { useToast } from '../context/ToastContext';
 export default function QuestionsPage() {
   const { questions, decks, approveQuestion, rejectQuestion, deleteQuestion, submitForReview } = useGame();
   const { user, currentUser } = useAuth();
-  const effectiveUser = currentUser || user || { id: 'user_1', name: 'Kianna Torff' };
+  const effectiveUser = currentUser || user || { id: 'user_1', name: 'Dr. Elena Rostova' };
   const { showToast } = useToast();
   const location = useLocation();
   const params = useParams();
   const navigate = useNavigate();
 
-  const [activeTab, setActiveTab] = useState('all'); // all, approved, pending, draft, my
+  const [activeTab, setActiveTab] = useState('my'); // my, all, approved, pending, draft
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDeck, setSelectedDeck] = useState('all');
   const [selectedDifficulty, setSelectedDifficulty] = useState('all');
 
   const [isAuthorModalOpen, setIsAuthorModalOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState(null);
-  const [analyticsQuestion, setAnalyticsQuestion] = useState(null);
+  const [viewingDetailQuestion, setViewingDetailQuestion] = useState(null);
 
   // Sync route state with modals
   useEffect(() => {
     if (location.pathname === '/questions/new') {
       setIsAuthorModalOpen(true);
       setEditingQuestion(null);
-    } else if (location.pathname.includes('/analytics') && params.id) {
-      const targetQ = questions.find((q) => q.id === params.id);
-      if (targetQ) {
-        setAnalyticsQuestion(targetQ);
-      }
     } else if (params.id && questions.length > 0) {
       const targetQ = questions.find((q) => q.id === params.id);
       if (targetQ) {
-        setEditingQuestion(targetQ);
-        setIsAuthorModalOpen(true);
+        setViewingDetailQuestion(targetQ);
       }
     }
   }, [location.pathname, params.id, questions]);
@@ -50,11 +44,17 @@ export default function QuestionsPage() {
   const filteredQuestions = useMemo(() => {
     return questions.filter((q) => {
       const statusLower = (q.status || '').toLowerCase();
+      
       // Tab filter
-      if (activeTab === 'approved' && statusLower !== 'approved' && statusLower !== 'live') return false;
-      if (activeTab === 'pending' && statusLower !== 'pending' && statusLower !== 'pending review') return false;
-      if (activeTab === 'draft' && statusLower !== 'draft') return false;
-      if (activeTab === 'my' && q.authorId !== effectiveUser.id && q.authorId !== 'user_1') return false;
+      if (activeTab === 'my') {
+        if (q.authorId !== effectiveUser.id) return false;
+      } else if (activeTab === 'approved') {
+        if (statusLower !== 'approved' && statusLower !== 'live') return false;
+      } else if (activeTab === 'pending') {
+        if (statusLower !== 'pending' && statusLower !== 'pending review') return false;
+      } else if (activeTab === 'draft') {
+        if (statusLower !== 'draft') return false;
+      }
 
       // Deck filter
       if (selectedDeck !== 'all' && q.deckId !== selectedDeck) return false;
@@ -68,8 +68,8 @@ export default function QuestionsPage() {
         const matchesPrompt = (q.prompt || q.text || '').toLowerCase().includes(query);
         const matchesTopic = (q.topic || '').toLowerCase().includes(query);
         const matchesDeck = (q.deckName || '').toLowerCase().includes(query);
-        const matchesTags = q.tags?.some((t) => t.toLowerCase().includes(query));
-        if (!matchesPrompt && !matchesTopic && !matchesDeck && !matchesTags) return false;
+        const matchesCitation = (q.citation || q.citations || '').toLowerCase().includes(query);
+        if (!matchesPrompt && !matchesTopic && !matchesDeck && !matchesCitation) return false;
       }
 
       return true;
@@ -103,6 +103,9 @@ export default function QuestionsPage() {
   };
 
   // Tab counts
+  const userAuthoredQuestions = questions.filter((q) => q.authorId === effectiveUser.id);
+  const countMy = userAuthoredQuestions.length;
+  const countAll = questions.length;
   const countApproved = questions.filter(
     (q) => (q.status || '').toLowerCase() === 'live' || (q.status || '').toLowerCase() === 'approved'
   ).length;
@@ -110,7 +113,6 @@ export default function QuestionsPage() {
     (q) => (q.status || '').toLowerCase() === 'pending' || (q.status || '').toLowerCase() === 'pending review'
   ).length;
   const countDraft = questions.filter((q) => (q.status || '').toLowerCase() === 'draft').length;
-  const countMy = questions.filter((q) => q.authorId === effectiveUser.id || q.authorId === 'user_1').length;
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -119,16 +121,16 @@ export default function QuestionsPage() {
         <div>
           <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2.5">
             <Sparkles className="w-6 h-6 text-[#0df2c9]" />
-            Question Quality & Authoring Engine
+            Long-Form Question Authoring
           </h1>
           <p className="text-xs sm:text-sm text-slate-400 mt-1">
-            Author high-distinction items, review peer submissions, and track question analytics.
+            Author comprehensive academic questions with attached diagrams, freehand drawings, and mathematical proofs.
           </p>
         </div>
 
         <button
           onClick={handleCreateNew}
-          className="px-5 py-2.5 bg-gradient-to-r from-[#0df2c9] to-[#00bfa5] text-slate-950 font-black text-xs sm:text-sm rounded-xl hover:shadow-lg hover:shadow-[#0df2c9]/30 transition-all flex items-center justify-center gap-2 self-start sm:self-auto cursor-pointer"
+          className="px-5 py-2.5 bg-gradient-to-r from-[#0df2c9] to-[#00bfa5] text-slate-950 font-black text-xs sm:text-sm rounded-xl hover:shadow-lg hover:shadow-[#0df2c9]/30 transition-all flex items-center justify-center gap-2 self-start sm:self-auto cursor-pointer shadow-md"
         >
           <Plus className="w-4 h-4 stroke-[3]" />
           Author Question (+30 DP)
@@ -143,8 +145,8 @@ export default function QuestionsPage() {
         {/* Tab Selection */}
         <div className="flex items-center gap-2 border-b border-[#22334d] pb-3 overflow-x-auto">
           {[
-            { id: 'all', label: 'All Questions', count: questions.length },
-            { id: 'my', label: 'My Questions', count: countMy },
+            { id: 'my', label: 'My Authored Questions', count: countMy },
+            { id: 'all', label: 'All Repository', count: countAll },
             { id: 'approved', label: 'Live / Approved', count: countApproved },
             { id: 'pending', label: 'Peer Review', count: countPending },
             { id: 'draft', label: 'Drafts', count: countDraft }
@@ -178,7 +180,7 @@ export default function QuestionsPage() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by keyword, concept, citation, topic..."
+              placeholder="Search by topic, concept, equation, or citation..."
               className="w-full bg-[#0b101b] border border-[#22334d] rounded-xl pl-10 pr-4 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-[#0df2c9]"
             />
           </div>
@@ -213,20 +215,24 @@ export default function QuestionsPage() {
         </div>
       </div>
 
-      {/* Questions Grid */}
+      {/* Questions Grid & Realistic Empty States */}
       {filteredQuestions.length === 0 ? (
-        <div className="bg-[#111927] border border-[#22334d] rounded-2xl p-12 text-center space-y-3">
-          <FileText className="w-10 h-10 text-slate-500 mx-auto" />
-          <h3 className="text-base font-bold text-white">No questions found</h3>
+        <div className="bg-[#111927] border border-[#22334d] rounded-3xl p-12 text-center space-y-3">
+          <FileText className="w-12 h-12 text-slate-500 mx-auto" />
+          <h3 className="text-base font-bold text-white">
+            {activeTab === 'my' ? 'No questions created yet' : 'No questions found'}
+          </h3>
           <p className="text-xs text-slate-400 max-w-sm mx-auto">
-            Try adjusting your search filters or author a brand new question to boost your distinction rating.
+            {activeTab === 'my'
+              ? 'Author your first long-form written question with attachments to earn +30 DP royalties!'
+              : 'Try adjusting your search query or filters to find questions in the academic repository.'}
           </p>
           <button
             onClick={handleCreateNew}
-            className="px-4 py-2 bg-[#0df2c9] text-slate-950 font-bold text-xs rounded-xl inline-flex items-center gap-1.5 mt-2 cursor-pointer"
+            className="px-5 py-2.5 bg-[#0df2c9] hover:bg-[#00e1ba] text-slate-950 font-black text-xs rounded-xl inline-flex items-center gap-1.5 mt-2 cursor-pointer shadow-md"
           >
-            <Plus className="w-3.5 h-3.5" />
-            Create First Question
+            <Plus className="w-4 h-4 stroke-[3]" />
+            Author First Question
           </button>
         </div>
       ) : (
@@ -236,9 +242,8 @@ export default function QuestionsPage() {
               key={q.id}
               question={q}
               onEdit={handleEdit}
+              onViewDetails={(question) => setViewingDetailQuestion(question)}
               onDelete={handleDelete}
-              onAnalytics={(question) => setAnalyticsQuestion(question)}
-              onViewAnalytics={(question) => setAnalyticsQuestion(question)}
               onSubmitReview={handleSubmitForReview}
               onDemoApprove={handleApprove}
               onApprove={handleApprove}
@@ -251,18 +256,16 @@ export default function QuestionsPage() {
       {/* Authoring & Editing Modal */}
       <QuestionModal
         isOpen={isAuthorModalOpen}
-        onClose={() => {
-          setIsAuthorModalOpen(false);
-          setEditingQuestion(null);
-        }}
+        onClose={() => setIsAuthorModalOpen(false)}
         question={editingQuestion}
       />
 
-      {/* Performance & Analytics Modal */}
-      <QuestionAnalyticsModal
-        isOpen={Boolean(analyticsQuestion)}
-        onClose={() => setAnalyticsQuestion(null)}
-        question={analyticsQuestion}
+      {/* Question Full Details Modal */}
+      <QuestionDetailModal
+        isOpen={Boolean(viewingDetailQuestion)}
+        onClose={() => setViewingDetailQuestion(null)}
+        question={viewingDetailQuestion}
+        onEdit={handleEdit}
       />
     </div>
   );

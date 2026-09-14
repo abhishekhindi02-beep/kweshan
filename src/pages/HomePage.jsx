@@ -1,23 +1,45 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Zap, Swords, Trophy, Flame, TrendingUp, BookOpen, 
-  ArrowRight, Play, Award, CheckCircle2, Clock, Sparkles 
+  ArrowRight, Play, Award, CheckCircle2, Clock, Sparkles,
+  FileEdit, Users, Shield, Check, X
 } from 'lucide-react';
 import StatCard from '../components/common/StatCard';
 import ProgressBar from '../components/common/ProgressBar';
 import Badge from '../components/common/Badge';
 import Avatar from '../components/common/Avatar';
+import Modal from '../components/common/Modal';
 import { useAuth } from '../context/AuthContext';
 import { useGame } from '../context/GameContext';
 
-export default function HomePage({ onOpenBattle, onOpenLightning, onStartPractice }) {
-  const { user, currentUser } = useAuth();
-  const effectiveUser = currentUser || user || { name: 'Scholar', dp: 1840, streak: 7, rank: 'Grandmaster Tier' };
-  const { decks, battles, activities, friends, questions, startPracticeDeck } = useGame();
+export default function HomePage({ onOpenBattle, onOpenLightning, onStartPractice, autoOpenLightning }) {
+  const { user, currentUser, updateUser } = useAuth();
+  const effectiveUser = currentUser || user || { 
+    name: 'Scholar', 
+    dp: 0, 
+    streak: 0, 
+    rank: 'Scholar Tier',
+    level: 1,
+    wins: 0,
+    losses: 0,
+    totalBattles: 0,
+    selectedSubjects: ['Physics', 'Mathematics'],
+    onboardingCompleted: true
+  };
+  const { decks, battles, activities, startPracticeDeck } = useGame();
   const navigate = useNavigate();
 
-  const activeBattles = battles.filter(b => b.status === 'in_progress' || b.status === 'your_turn');
+  // Onboarding state: show if newly registered or onboardingCompleted is false
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    return effectiveUser?.onboardingCompleted === false;
+  });
+
+  const activeBattles = battles.filter(
+    (b) => (b.status === 'in_progress' || b.status === 'your_turn') && 
+           (b.challengerId === effectiveUser?.id || b.opponentId === effectiveUser?.id)
+  );
+  
   const userDecks = decks.slice(0, 4);
 
   const handlePractice = (deckId) => {
@@ -27,6 +49,15 @@ export default function HomePage({ onOpenBattle, onOpenLightning, onStartPractic
       startPracticeDeck(deckId);
     }
   };
+
+  const handleCompleteOnboarding = () => {
+    updateUser({ onboardingCompleted: true });
+    setShowOnboarding(false);
+  };
+
+  const winRateFormatted = effectiveUser?.totalBattles > 0
+    ? `${Math.round(((effectiveUser?.wins || 0) / effectiveUser.totalBattles) * 100)}%`
+    : '0%';
 
   return (
     <div className="space-y-8 animate-fadeIn">
@@ -52,8 +83,10 @@ export default function HomePage({ onOpenBattle, onOpenLightning, onStartPractic
 
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <Badge variant="mint">{effectiveUser?.rank || 'Grandmaster Tier'}</Badge>
-                <span className="text-xs text-slate-400 font-mono">ID: {effectiveUser?.id || 'usr-1'}</span>
+                <Badge variant="mint">{effectiveUser?.rank || effectiveUser?.tier || 'Scholar Tier'}</Badge>
+                <span className="text-xs text-slate-400 font-mono">
+                  {effectiveUser?.handle || `@${effectiveUser?.username || 'scholar'}`}
+                </span>
               </div>
               <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
                 Welcome back, <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-[#0df2c9]">{effectiveUser?.name}</span>!
@@ -67,7 +100,7 @@ export default function HomePage({ onOpenBattle, onOpenLightning, onStartPractic
           <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
             <button
               onClick={onOpenLightning}
-              className="flex-1 md:flex-initial px-5 py-3 rounded-xl bg-gradient-to-r from-[#0df2c9] to-[#00bfa5] text-slate-950 font-black text-xs sm:text-sm hover:shadow-lg hover:shadow-[#0df2c9]/30 transition-all flex items-center justify-center gap-2 transform active:scale-95 cursor-pointer"
+              className="flex-1 md:flex-initial px-5 py-3 rounded-xl bg-gradient-to-r from-[#0df2c9] to-[#00bfa5] text-slate-950 font-black text-xs sm:text-sm hover:shadow-lg hover:shadow-[#0df2c9]/30 transition-all flex items-center justify-center gap-2 transform active:scale-95 cursor-pointer shadow-md"
             >
               <Zap className="w-4 h-4 fill-slate-950" />
               Daily Lightning
@@ -83,13 +116,13 @@ export default function HomePage({ onOpenBattle, onOpenLightning, onStartPractic
         </div>
       </div>
 
-      {/* 4 Stat Cards */}
+      {/* 4 Data-Driven Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           icon={Award}
           title="Distinction Points"
           value={typeof effectiveUser?.dp === 'number' ? effectiveUser.dp.toLocaleString() : '0'}
-          change={effectiveUser?.dp > 0 ? "+120 DP this week" : "Earn +30 DP per question"}
+          change={effectiveUser?.dp > 0 ? `+${effectiveUser.weeklyChange || 30} DP this week` : "Earn +30 DP per live question"}
           color="mint"
         />
         <StatCard
@@ -102,7 +135,7 @@ export default function HomePage({ onOpenBattle, onOpenLightning, onStartPractic
         <StatCard
           icon={TrendingUp}
           title="Battle Win Rate"
-          value={effectiveUser?.totalBattles > 0 ? `${Math.round(((effectiveUser?.wins || 0) / effectiveUser.totalBattles) * 100)}%` : '0%'}
+          value={winRateFormatted}
           change={`${effectiveUser?.wins || 0} Wins / ${effectiveUser?.losses || 0} Losses`}
           color="purple"
         />
@@ -110,7 +143,7 @@ export default function HomePage({ onOpenBattle, onOpenLightning, onStartPractic
           icon={Flame}
           title="Active Daily Streak"
           value={`${effectiveUser?.streak ?? 0} Days`}
-          change="Keep it burning!"
+          change={effectiveUser?.streak > 0 ? "Flame burning strong!" : "Start today's streak"}
           color="rose"
         />
       </div>
@@ -128,7 +161,7 @@ export default function HomePage({ onOpenBattle, onOpenLightning, onStartPractic
               </span>
               <span className="text-xs text-slate-300 font-medium flex items-center gap-1">
                 <Clock className="w-3.5 h-3.5 text-amber-400" />
-                Resets in 5h 18m
+                10 Rapid-Fire Prompts
               </span>
             </div>
             <h3 className="text-lg font-bold text-white mt-1">10-Question Lightning Arena</h3>
@@ -174,7 +207,7 @@ export default function HomePage({ onOpenBattle, onOpenLightning, onStartPractic
                 <div>
                   <div className="flex items-start justify-between mb-3">
                     <span className="text-2xl">{deck.icon || '📚'}</span>
-                    <Badge variant={deck.mastery >= 80 ? 'mint' : deck.mastery >= 50 ? 'purple' : 'neutral'}>
+                    <Badge variant={deck.mastery >= 80 ? 'mint' : deck.mastery >= 40 ? 'purple' : 'neutral'}>
                       {deck.mastery || deck.progress || 0}% Mastery
                     </Badge>
                   </div>
@@ -222,7 +255,9 @@ export default function HomePage({ onOpenBattle, onOpenLightning, onStartPractic
                 <Swords className="w-4 h-4 text-[#0df2c9]" />
                 <h3 className="text-sm font-bold text-white">Live Challenges</h3>
               </div>
-              <Badge variant="mint">{activeBattles.length} Active</Badge>
+              <Badge variant={activeBattles.length > 0 ? 'mint' : 'neutral'}>
+                {activeBattles.length} Active
+              </Badge>
             </div>
 
             <div className="space-y-3">
@@ -251,7 +286,7 @@ export default function HomePage({ onOpenBattle, onOpenLightning, onStartPractic
                 ))
               ) : (
                 <div className="p-4 text-center text-xs text-slate-500 bg-[#0b101b] rounded-xl border border-[#1b273a]">
-                  No active challenges right now.
+                  No active challenges right now. Jump into Quick Match or Daily Lightning!
                 </div>
               )}
             </div>
@@ -272,24 +307,125 @@ export default function HomePage({ onOpenBattle, onOpenLightning, onStartPractic
             </div>
 
             <div className="space-y-3">
-              {activities.slice(0, 4).map((act) => (
-                <div key={act.id} className="flex items-start gap-3 text-xs">
-                  <div className="w-2 h-2 rounded-full bg-[#0df2c9] mt-1.5 flex-shrink-0" />
-                  <div className="flex-1">
-                    <p className="text-slate-300 font-medium leading-tight">{act.text || act.title}</p>
-                    <span className="text-[10px] text-slate-500 font-mono">{act.time || 'Today'}</span>
+              {activities.length > 0 ? (
+                activities.slice(0, 4).map((act) => (
+                  <div key={act.id} className="flex items-start gap-3 text-xs">
+                    <div className="w-2 h-2 rounded-full bg-[#0df2c9] mt-1.5 flex-shrink-0" />
+                    <div className="flex-1">
+                      <p className="text-slate-300 font-medium leading-tight">{act.text || act.title}</p>
+                      <span className="text-[10px] text-slate-500 font-mono">{act.time || 'Today'}</span>
+                    </div>
+                    {act.dp > 0 && (
+                      <span className="font-mono font-bold text-[#0df2c9] text-xs">
+                        +{act.dp} DP
+                      </span>
+                    )}
                   </div>
-                  {act.dp && (
-                    <span className="font-mono font-bold text-[#0df2c9] text-xs">
-                      +{act.dp} DP
-                    </span>
-                  )}
+                ))
+              ) : (
+                <div className="p-4 text-center text-xs text-slate-500 bg-[#0b101b] rounded-xl border border-[#1b273a]">
+                  No activity yet. Start your first practice session or challenge an AI opponent!
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </div>
       </div>
+
+      {/* First-Time User Welcome Onboarding Modal */}
+      {showOnboarding && (
+        <Modal
+          isOpen={showOnboarding}
+          onClose={handleCompleteOnboarding}
+          title={`Welcome to Kweshun, ${effectiveUser.name}!`}
+          subtitle="Your academic competition dashboard is initialized. Here is how you can excel:"
+          maxWidth="max-w-2xl"
+        >
+          <div className="space-y-6 animate-fadeIn">
+            {/* Selected Interests Pill Box */}
+            <div className="p-4 bg-[#111927] border border-[#22334d] rounded-2xl space-y-2">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
+                Your Enrolled Disciplines:
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {(effectiveUser.selectedSubjects || ['Physics', 'Mathematics']).map((s) => (
+                  <span
+                    key={s}
+                    className="px-3 py-1 rounded-xl bg-[#0df2c9]/15 border border-[#0df2c9]/40 text-[#0df2c9] text-xs font-mono font-bold"
+                  >
+                    ✓ {s}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* 5 Core Capabilities Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">
+              <div className="p-3.5 bg-[#0b101b] border border-[#1c273e] rounded-xl space-y-1">
+                <div className="flex items-center gap-2 text-xs font-bold text-[#0df2c9]">
+                  <BookOpen className="w-4 h-4" />
+                  <span>1. Practice Decks</span>
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  Study academic topic flashcards and increase your mastery rating.
+                </p>
+              </div>
+
+              <div className="p-3.5 bg-[#0b101b] border border-[#1c273e] rounded-xl space-y-1">
+                <div className="flex items-center gap-2 text-xs font-bold text-[#8b5cf6]">
+                  <FileEdit className="w-4 h-4" />
+                  <span>2. Author Questions</span>
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  Write long-form questions with attached images, freehand drawings & formulas (+30 DP).
+                </p>
+              </div>
+
+              <div className="p-3.5 bg-[#0b101b] border border-[#1c273e] rounded-xl space-y-1">
+                <div className="flex items-center gap-2 text-xs font-bold text-amber-400">
+                  <Swords className="w-4 h-4" />
+                  <span>3. Challenge AI Opponents</span>
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  Duel in 5-round face-offs or rapid Daily Lightning arena for Double DP.
+                </p>
+              </div>
+
+              <div className="p-3.5 bg-[#0b101b] border border-[#1c273e] rounded-xl space-y-1">
+                <div className="flex items-center gap-2 text-xs font-bold text-emerald-400">
+                  <TrendingUp className="w-4 h-4" />
+                  <span>4. Track Progress</span>
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  Earn Distinction Points (DP), build your daily streak, and climb the Leaderboard.
+                </p>
+              </div>
+
+              <div className="p-3.5 bg-[#0b101b] border border-[#1c273e] rounded-xl space-y-1 sm:col-span-2">
+                <div className="flex items-center gap-2 text-xs font-bold text-[#38bdf8]">
+                  <Users className="w-4 h-4" />
+                  <span>5. Connect with Peers</span>
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  Form study circles and exchange direct academic challenges.
+                </p>
+              </div>
+            </div>
+
+            {/* Primary Action Button */}
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={handleCompleteOnboarding}
+                className="w-full py-3.5 bg-gradient-to-r from-[#0df2c9] to-[#00bfa5] text-slate-950 font-black text-xs sm:text-sm uppercase tracking-wider rounded-xl hover:shadow-lg hover:shadow-[#0df2c9]/30 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md"
+              >
+                <span>Start Learning & Practice</span>
+                <ArrowRight className="w-4 h-4 stroke-[3]" />
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

@@ -14,46 +14,19 @@ import {
 import { calculateQualityScores } from './qualityScorer.js';
 import storageService, { STORAGE_KEYS } from './storageService.js';
 
-const STORAGE_KEY = 'kweshun_app_state_v3';
-
-export function validateQuestion(q) {
-  if (!q) return { valid: false, error: 'Question object is missing' };
-  if (!q.id) return { valid: false, error: 'Question ID is required' };
-  if (!q.deckId) return { valid: false, error: 'Question must be assigned to a deck' };
-  const prompt = q.prompt || q.text || q.question;
-  if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
-    return { valid: false, error: 'Question prompt is required' };
-  }
-  if (!Array.isArray(q.options) || q.options.length !== 4) {
-    return { valid: false, error: 'Question must have exactly 4 options' };
-  }
-  for (let i = 0; i < 4; i++) {
-    const optText = typeof q.options[i] === 'string' ? q.options[i] : q.options[i]?.text;
-    if (!optText || !optText.trim()) {
-      return { valid: false, error: `Option ${String.fromCharCode(65 + i)} cannot be empty` };
-    }
-  }
-  const correctIdx = typeof q.correctAnswerIndex === 'number' 
-    ? q.correctAnswerIndex 
-    : (typeof q.correctIndex === 'number' ? q.correctIndex : q.options.findIndex(o => (typeof o === 'object' && o.isCorrect)));
-  if (correctIdx < 0 || correctIdx > 3) {
-    return { valid: false, error: 'Valid correct answer index (0-3) is required' };
-  }
-  if (!q.explanation || typeof q.explanation !== 'string' || !q.explanation.trim()) {
-    return { valid: false, error: 'Explanation is required' };
-  }
-  return { valid: true, error: null };
-}
+const STORAGE_KEY = 'kweshun_multi_user_store_v4';
 
 export function normalizeQuestion(q) {
   if (!q) return null;
   const promptText = q.prompt || q.text || q.question || '';
+  const isLongForm = Boolean(q.image || q.drawing || (Array.isArray(q.equations) && q.equations.length > 0) || !q.options || q.options.length === 0);
+
   let correctIdx = typeof q.correctAnswerIndex === 'number' 
     ? q.correctAnswerIndex 
     : (typeof q.correctIndex === 'number' ? q.correctIndex : 0);
   
-  // Format options consistently
-  const formattedOptions = (q.options || []).map((opt, i) => {
+  // Format options consistently if multiple choice
+  const formattedOptions = Array.isArray(q.options) && q.options.length > 0 ? q.options.map((opt, i) => {
     if (typeof opt === 'string') {
       return {
         id: `opt_${i + 1}`,
@@ -68,40 +41,7 @@ export function normalizeQuestion(q) {
       text: opt.text || '',
       isCorrect
     };
-  });
-
-  // Calculate analytics defaults
-  const plays = typeof q.plays === 'number' ? q.plays : (typeof q.totalAttempts === 'number' ? q.totalAttempts : 0);
-  const correctAttempts = typeof q.correctAttempts === 'number' ? q.correctAttempts : Math.round(plays * 0.7);
-  const incorrectAttempts = typeof q.incorrectAttempts === 'number' ? q.incorrectAttempts : Math.max(0, plays - correctAttempts);
-  const accuracy = plays > 0 ? Math.round((correctAttempts / plays) * 100) : (q.accuracy || 0);
-
-  let answerDist = q.answerDistribution;
-  if (!answerDist) {
-    if (plays > 0) {
-      const correctLetter = ['A', 'B', 'C', 'D'][correctIdx] || 'A';
-      const rem = plays - correctAttempts;
-      const d1 = Math.floor(rem / 3);
-      const d2 = Math.floor(rem / 3);
-      const d3 = rem - d1 - d2;
-      answerDist = { A: 0, B: 0, C: 0, D: 0 };
-      answerDist[correctLetter] = correctAttempts;
-      const otherLetters = ['A', 'B', 'C', 'D'].filter(l => l !== correctLetter);
-      answerDist[otherLetters[0]] = d1;
-      answerDist[otherLetters[1]] = d2;
-      answerDist[otherLetters[2]] = d3;
-    } else {
-      answerDist = { A: 0, B: 0, C: 0, D: 0 };
-    }
-  }
-
-  const totalD = (answerDist.A || 0) + (answerDist.B || 0) + (answerDist.C || 0) + (answerDist.D || 0);
-  const optionDistribution = totalD > 0 ? [
-    Math.round(((answerDist.A || 0) / totalD) * 100),
-    Math.round(((answerDist.B || 0) / totalD) * 100),
-    Math.round(((answerDist.C || 0) / totalD) * 100),
-    Math.round(((answerDist.D || 0) / totalD) * 100)
-  ] : [0, 0, 0, 0];
+  }) : [];
 
   const qualityScores = q.qualityScores || calculateQualityScores(q);
 
@@ -113,26 +53,26 @@ export function normalizeQuestion(q) {
 
   return {
     ...q,
+    id: q.id || `Q-${Math.floor(1000 + Math.random() * 9000)}`,
     text: promptText,
     prompt: promptText,
     options: formattedOptions,
     correctAnswerIndex: correctIdx,
     correctIndex: correctIdx,
-    explanation: q.explanation || 'Canonical academic derivation and proof.',
-    citation: q.citation || q.citations || 'Academic Standard Curriculum',
-    citations: q.citations || q.citation || 'Academic Standard Curriculum',
-    difficulty: q.difficulty || 'Medium',
+    explanation: q.explanation || 'Detailed academic derivation and proof.',
+    citation: q.citation || q.citations || 'Academic Standard Reference',
+    citations: q.citations || q.citation || 'Academic Standard Reference',
+    difficulty: q.difficulty ? (q.difficulty.charAt(0).toUpperCase() + q.difficulty.slice(1).toLowerCase()) : 'Medium',
     status: canonicalStatus,
-    plays,
-    totalAttempts: plays,
-    correctAttempts,
-    incorrectAttempts,
-    accuracy,
-    answerDistribution: answerDist,
-    optionDistribution,
-    avgTimeSeconds: q.avgTimeSeconds || 7.2,
-    dpEarned: q.dpEarned || (canonicalStatus === 'Live' ? 30 : 0),
-    qualityScores
+    image: q.image || q.imageUrl || null,
+    drawing: q.drawing || q.figure || null,
+    equations: Array.isArray(q.equations) ? q.equations : (q.equation ? [q.equation] : []),
+    tags: Array.isArray(q.tags) ? q.tags : ['Academic', 'Long-form'],
+    plays: q.plays ?? 0,
+    accuracy: q.accuracy ?? 75,
+    dpEarned: q.dpEarned ?? (canonicalStatus === 'Live' ? 30 : 0),
+    qualityScores,
+    createdAt: q.createdAt || new Date().toISOString()
   };
 }
 
@@ -147,55 +87,37 @@ class DataStore {
       if (typeof localStorage !== 'undefined') {
         const saved = localStorage.getItem(STORAGE_KEY);
         const savedUser = storageService.getUser();
-        const savedQuestions = storageService.getQuestions();
-        const savedDecks = storageService.getDecks();
-        const savedBattles = storageService.getBattles();
-        const savedFriends = storageService.getFriends();
-        const savedRequests = storageService.getPendingRequests();
-        const savedNotifs = storageService.getNotifications();
-        const savedActivities = storageService.getActivity();
 
-        if (saved || savedUser || savedQuestions) {
-          const parsed = saved ? JSON.parse(saved) : {};
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          this.users = parsed.users || initialUsers;
           
-          // Users
+          // If a user was saved in storageService, sync it
           if (savedUser) {
-            this.users = parsed.users || initialUsers;
-            const idx = this.users.findIndex(u => u.id === (savedUser.id || 'user_1'));
+            const idx = this.users.findIndex(u => u.id === savedUser.id);
             if (idx >= 0) {
               this.users[idx] = { ...this.users[idx], ...savedUser };
             } else {
               this.users.unshift(savedUser);
             }
-          } else {
-            this.users = parsed.users || initialUsers;
           }
 
-          this.currentUserId = parsed.currentUserId || 'user_1';
-          this.decks = savedDecks || parsed.decks || initialDecks;
-          
-          // Ensure questions are merged with initial questions
-          const loadedQuestions = (savedQuestions || parsed.questions || []).map(normalizeQuestion);
-          const initialNormalized = initialQuestions.map(normalizeQuestion);
-          
-          // Combine loaded questions and any missing initial questions
-          const loadedIds = new Set(loadedQuestions.map(q => q.id));
-          const missing = initialNormalized.filter(q => !loadedIds.has(q.id));
-          this.questions = [...loadedQuestions, ...missing];
-
-          this.battles = savedBattles || parsed.battles || initialBattles;
+          this.currentUserId = parsed.currentUserId || (savedUser?.id || this.users[0]?.id || 'user_1');
+          this.decks = parsed.decks || initialDecks;
+          this.questions = (parsed.questions || initialQuestions).map(normalizeQuestion);
+          this.battles = parsed.battles || initialBattles;
           this.incomingInvites = parsed.incomingInvites || initialIncomingInvites;
           this.battleLogs = parsed.battleLogs || initialBattleLogs;
-          this.friendRequests = savedRequests || parsed.friendRequests || initialFriendRequests;
-          this.friends = savedFriends || parsed.friends || initialFriends;
-          this.notifications = savedNotifs || parsed.notifications || initialNotifications;
-          this.activities = savedActivities || parsed.activities || initialActivities;
+          this.friendRequests = parsed.friendRequests || initialFriendRequests;
+          this.friends = parsed.friends || initialFriends;
+          this.notifications = parsed.notifications || initialNotifications;
+          this.activities = parsed.activities || initialActivities;
           this.dpTransactions = parsed.dpTransactions || initialDPTransactions;
           return;
         }
       }
     } catch (e) {
-      console.error('Failed to load state from localStorage', e);
+      console.error('DataStore: Failed to load state from localStorage', e);
     }
 
     // Default initialization
@@ -221,21 +143,13 @@ class DataStore {
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 
-        // Also save to individual standardized storage keys
         const currentUser = this.getCurrentUser();
         if (currentUser) {
           storageService.saveUser(currentUser);
         }
-        storageService.saveQuestions(this.questions);
-        storageService.saveDecks(this.decks);
-        storageService.saveBattles(this.battles);
-        storageService.saveFriends(this.friends);
-        storageService.savePendingRequests(this.friendRequests);
-        storageService.saveNotifications(this.notifications);
-        storageService.saveActivity(this.activities);
       }
     } catch (e) {
-      console.error('Failed to save state to localStorage', e);
+      console.error('DataStore: Failed to save state to localStorage', e);
     }
     this.notify();
   }
@@ -273,6 +187,9 @@ class DataStore {
   setCurrentUser(userId) {
     if (this.users.some(u => u.id === userId)) {
       this.currentUserId = userId;
+      const user = this.getCurrentUser();
+      storageService.saveUser(user);
+      storageService.setLoggedIn(true);
       this.saveState();
     }
   }
@@ -310,20 +227,15 @@ class DataStore {
       bio: 'Competitive scholar on Kweshun.',
       royaltiesEarned: 0,
       globalAccuracy: 0,
-      mostPlayedDeck: 'General Knowledge',
-      selectedSubjects: selectedSubjects || [],
+      mostPlayedDeck: 'Science',
+      selectedSubjects: selectedSubjects || ['Physics', 'Mathematics'],
+      deckProgress: {},
       isRegistered: true,
+      onboardingCompleted: false, // New user needs welcome onboarding
       createdAt: new Date().toISOString()
     };
 
-    // Remove previous demo user if exists, and unshift the new registered user
-    const existingIdx = this.users.findIndex(u => u.id === newUser.id || u.email.toLowerCase() === cleanEmail);
-    if (existingIdx >= 0) {
-      this.users[existingIdx] = newUser;
-    } else {
-      this.users.unshift(newUser);
-    }
-    
+    this.users.unshift(newUser);
     this.currentUserId = newUser.id;
     storageService.saveUser(newUser);
     storageService.setLoggedIn(true);
@@ -337,7 +249,8 @@ class DataStore {
     const user = this.users.find(u => 
       (u.email && u.email.toLowerCase() === clean) || 
       (u.username && u.username.toLowerCase() === cleanNoAt) ||
-      (u.handle && u.handle.toLowerCase() === clean)
+      (u.handle && u.handle.toLowerCase() === clean) ||
+      (u.name && u.name.toLowerCase() === clean)
     );
 
     if (user) {
@@ -348,16 +261,7 @@ class DataStore {
       return { user };
     }
 
-    // Check if there is a saved user in storage
-    const savedUser = storageService.getUser();
-    if (savedUser && savedUser.isRegistered) {
-      this.currentUserId = savedUser.id;
-      storageService.setLoggedIn(true);
-      this.saveState();
-      return { user: savedUser };
-    }
-
-    return { error: 'No Kweshun profile found. Please sign up first.' };
+    return { error: 'No Kweshun profile found. Please sign up or select a Demo Scholar.' };
   }
 
   updateUser(id, updates) {
@@ -370,7 +274,7 @@ class DataStore {
     return null;
   }
 
-  // --- DP System & Ledger ---
+  // --- DP Ledger System ---
   addDPTransaction(userId, amount, reason, sourceType, sourceId) {
     const user = this.users.find(u => u.id === userId);
     if (!user) return null;
@@ -416,31 +320,60 @@ class DataStore {
       avatar: user.avatar,
       level: user.level,
       tier: user.tier,
-      wins: user.wins,
-      losses: user.losses,
-      totalBattles: user.totalBattles,
+      wins: user.wins || 0,
+      losses: user.losses || 0,
+      totalBattles: user.totalBattles || 0,
       winRate: user.totalBattles > 0 ? Math.round((user.wins / user.totalBattles) * 100) : 0,
-      score: timeframe === 'monthly' ? (user.score || 400) : user.dp,
-      dp: user.dp,
-      subject: user.subject || 'STEM General',
+      score: user.score || user.dp || 0,
+      dp: user.dp || 0,
+      subject: user.selectedSubjects?.[0] || 'Academic General',
       isCurrentUser: user.id === this.currentUserId
     }));
   }
 
-  // --- Decks & Progress System ---
-  updateDeckMastery(deckId, increasePercentage = 10) {
-    const deck = this.decks.find(d => d.id === deckId);
-    if (!deck) return null;
+  // --- User-Specific Decks & Mastery ---
+  getDecksForUser(userId = null) {
+    const targetUserId = userId || this.currentUserId;
+    const user = this.users.find(u => u.id === targetUserId);
 
-    const currentMastery = deck.mastery || deck.progress || 0;
-    const newMastery = Math.min(100, Math.max(0, currentMastery + increasePercentage));
-    deck.mastery = newMastery;
-    deck.progress = newMastery;
+    return this.decks.map((deck) => {
+      let mastery = 0;
+      if (user?.deckProgress && typeof user.deckProgress[deck.id] === 'number') {
+        mastery = user.deckProgress[deck.id];
+      } else if (user?.isRegistered && user?.dp === 0 && !user.onboardingCompleted) {
+        mastery = 0;
+      } else {
+        mastery = deck.mastery || deck.progress || 0;
+      }
+
+      return {
+        ...deck,
+        mastery,
+        progress: mastery
+      };
+    });
+  }
+
+  updateDeckMastery(deckId, increasePercentage = 10, userId = null) {
+    const targetUserId = userId || this.currentUserId;
+    const user = this.users.find(u => u.id === targetUserId);
+    if (!user) return null;
+
+    if (!user.deckProgress) user.deckProgress = {};
+    const current = user.deckProgress[deckId] || 0;
+    const newMastery = Math.min(100, Math.max(0, current + increasePercentage));
+    user.deckProgress[deckId] = newMastery;
+
+    const deck = this.decks.find(d => d.id === deckId);
+    if (deck) {
+      deck.mastery = newMastery;
+      deck.progress = newMastery;
+    }
     this.saveState();
     return deck;
   }
 
-  // --- Questions CRUD & Quality System ---
+  // --- Questions CRUD & Long-Form Management ---
   getQuestions(filters = {}) {
     let list = [...this.questions];
     if (filters.authorId) {
@@ -495,42 +428,35 @@ class DataStore {
     const newQuestion = normalizeQuestion({
       id: `Q-${Math.floor(1000 + Math.random() * 9000)}`,
       authorId,
-      authorName: questionData.authorName || user?.name || 'Kianna Torff',
+      authorName: questionData.authorName || user?.name || 'Scholar',
       deckId: questionData.deckId || 'deck_1',
       deckName: questionData.deckName || 'General Academic Deck',
       category: questionData.category || 'Science',
-      topic: questionData.topic || questionData.prompt?.slice(0, 40) || 'Academic Concept',
+      topic: questionData.topic || questionData.prompt?.slice(0, 45) || 'Academic Concept',
       text: questionData.prompt || questionData.text,
       prompt: questionData.prompt || questionData.text,
-      options: questionData.options,
-      correctAnswerIndex: questionData.correctAnswerIndex ?? questionData.correctIndex ?? 0,
-      correctIndex: questionData.correctIndex ?? questionData.correctAnswerIndex ?? 0,
       explanation: questionData.explanation || '',
-      citations: questionData.citations || questionData.citation || '',
       citation: questionData.citation || questionData.citations || '',
+      citations: questionData.citations || questionData.citation || '',
       difficulty: questionData.difficulty || 'Medium',
-      tags: questionData.tags || ['Academic', 'Competitive'],
+      tags: questionData.tags || ['Academic', 'Long-form'],
+      image: questionData.image || null,
+      drawing: questionData.drawing || null,
+      equations: questionData.equations || [],
       status: canonicalStatus,
       qualityScores,
-      plays: 0,
-      totalAttempts: 0,
-      correctAttempts: 0,
-      incorrectAttempts: 0,
-      accuracy: 0,
-      answerDistribution: { A: 0, B: 0, C: 0, D: 0 },
-      optionDistribution: [0, 0, 0, 0],
       dpEarned: canonicalStatus === 'Live' ? 30 : 0,
       createdAt: new Date().toISOString()
     });
 
     this.questions.unshift(newQuestion);
 
-    // If published as Live, award +30 DP immediately
+    // If published Live, award +30 DP
     if (canonicalStatus === 'Live') {
       this.addDPTransaction(
         authorId,
         30,
-        `Direct Publish Royalty for question "${newQuestion.topic}"`,
+        `Publication Royalty for "${newQuestion.topic}"`,
         'question',
         newQuestion.id
       );
@@ -538,9 +464,9 @@ class DataStore {
       this.addActivity(
         authorId,
         'question_published',
-        'Question Published Directly',
-        `"${newQuestion.topic}" published live to academic decks (+30 DP).`,
-        '#00f59b',
+        'Long-Form Question Published',
+        `"${newQuestion.topic}" published live (+30 DP).`,
+        '#0df2c9',
         'CheckCircle2',
         30
       );
@@ -553,8 +479,8 @@ class DataStore {
       this.addActivity(
         authorId,
         'question_submitted',
-        'Question Submitted for Review',
-        `"${newQuestion.topic}" queued for peer verification.`,
+        'Question Submitted for Peer Review',
+        `"${newQuestion.topic}" queued for council evaluation.`,
         '#f59e0b',
         'FileEdit'
       );
@@ -573,9 +499,7 @@ class DataStore {
     if (idx === -1) return null;
 
     const merged = normalizeQuestion({ ...this.questions[idx], ...updates, updatedAt: new Date().toISOString() });
-    if (updates.text || updates.prompt || updates.options || updates.explanation || updates.citations) {
-      merged.qualityScores = calculateQualityScores(merged);
-    }
+    merged.qualityScores = calculateQualityScores(merged);
     this.questions[idx] = merged;
 
     const authorId = this.questions[idx].authorId;
@@ -610,19 +534,11 @@ class DataStore {
       question.authorId,
       'question_approved',
       'Question Approved',
-      `"${question.topic}" was vetted by peer council (+30 DP).`,
-      '#00f59b',
+      `"${question.topic}" was approved by peer council (+30 DP).`,
+      '#0df2c9',
       'Check',
       30
     );
-
-    this.addNotification(question.authorId, {
-      type: 'question_approved',
-      category: 'questions',
-      title: 'Question Approved: +30 DP Royalties',
-      message: `"${question.topic}" was approved and published with Quality Score ${question.qualityScores.composite} (${question.qualityScores.grade}).`,
-      metadata: { questionId: question.id }
-    });
 
     const user = this.users.find(u => u.id === question.authorId);
     if (user) {
@@ -652,39 +568,6 @@ class DataStore {
 
     this.saveState();
     return true;
-  }
-
-  // --- Dynamic Question Attempt Recording ---
-  recordQuestionAttempt(questionId, selectedOptionIdx, isCorrect, responseTimeMs = 3000) {
-    const q = this.questions.find(item => item.id === questionId);
-    if (!q) return;
-
-    q.plays = (q.plays || 0) + 1;
-    q.totalAttempts = q.plays;
-
-    if (!q.answerDistribution) {
-      q.answerDistribution = { A: 0, B: 0, C: 0, D: 0 };
-    }
-    const letter = ['A', 'B', 'C', 'D'][selectedOptionIdx] || 'A';
-    q.answerDistribution[letter] = (q.answerDistribution[letter] || 0) + 1;
-
-    if (isCorrect) {
-      q.correctAttempts = (q.correctAttempts || 0) + 1;
-    } else {
-      q.incorrectAttempts = (q.incorrectAttempts || 0) + 1;
-    }
-
-    q.accuracy = Math.round((q.correctAttempts / q.plays) * 100);
-
-    const totalDist = (q.answerDistribution.A || 0) + (q.answerDistribution.B || 0) + (q.answerDistribution.C || 0) + (q.answerDistribution.D || 0);
-    q.optionDistribution = totalDist > 0 ? [
-      Math.round(((q.answerDistribution.A || 0) / totalDist) * 100),
-      Math.round(((q.answerDistribution.B || 0) / totalDist) * 100),
-      Math.round(((q.answerDistribution.C || 0) / totalDist) * 100),
-      Math.round(((q.answerDistribution.D || 0) / totalDist) * 100)
-    ] : [0, 0, 0, 0];
-
-    this.saveState();
   }
 
   // --- Battles & Interactive Gameplay ---
@@ -742,18 +625,10 @@ class DataStore {
       challenger.id,
       'battle_challenge_dispatched',
       'Challenge Dispatched',
-      `Sent ${isSuddenDeath ? 'Sudden Death' : 'Standard'} challenge to ${opponent.name} in ${subject}.`,
+      `Sent challenge to ${opponent.name} in ${subject}.`,
       '#0df2c9',
       'Swords'
     );
-
-    this.addNotification(challenger.id, {
-      type: 'challenge_dispatched',
-      category: 'battles',
-      title: 'Challenge Dispatched',
-      message: `Challenge sent to ${opponent.name} in ${subject}.`,
-      metadata: { battleId: newBattle.id, deckId }
-    });
 
     this.saveState();
     return newBattle;
@@ -826,12 +701,9 @@ class DataStore {
       isUserCorrect = !!(selectedOption && selectedOption.isCorrect);
     }
 
-    // AI opponent performance simulation based on realistic accuracy (~65-75%)
-    const opponentCorrect = Math.random() < 0.70;
+    // AI opponent simulated response
+    const opponentCorrect = Math.random() < 0.68;
     const opponentTimeMs = Math.floor(2500 + Math.random() * 4000);
-
-    // Record question attempt in analytics
-    this.recordQuestionAttempt(qId, selectedIdx, isUserCorrect, responseTimeMs);
 
     if (isUserCorrect) battle.userScore += 1;
     if (opponentCorrect) battle.opponentScore += 1;
@@ -845,7 +717,7 @@ class DataStore {
       userTimeMs: responseTimeMs,
       opponentTimeMs,
       explanation: question.explanation,
-      correctOptionId: (question.options.find(o => o.isCorrect) || {}).id || 'opt_1'
+      correctOptionId: (question.options?.find(o => o.isCorrect) || {}).id || 'opt_1'
     };
 
     battle.roundHistory.push(roundRecord);
@@ -884,7 +756,7 @@ class DataStore {
           isVictory ? 'battle_victory' : 'battle_defeat',
           isVictory ? `Won match vs ${battle.opponentName}` : isDraw ? `Draw vs ${battle.opponentName}` : `Match Defeat vs ${battle.opponentName}`,
           `${dpChange >= 0 ? '+' : ''}${dpChange} DP in ${battle.subject} (${battle.userScore} - ${battle.opponentScore})`,
-          isVictory ? '#00f59b' : isDraw ? '#f59e0b' : '#ef4444',
+          isVictory ? '#0df2c9' : isDraw ? '#f59e0b' : '#ef4444',
           'Swords'
         );
 
@@ -900,14 +772,6 @@ class DataStore {
           dpChange,
           roundsWon: battle.userScore,
           accuracy: Math.round((battle.userScore / battle.maxRounds) * 100)
-        });
-
-        this.addNotification(user.id, {
-          type: 'battle_result',
-          category: 'battles',
-          title: isVictory ? `Match Victory vs ${battle.opponentName}` : isDraw ? `Match Draw vs ${battle.opponentName}` : `Match Defeat vs ${battle.opponentName}`,
-          message: `Final Score: ${battle.userScore} - ${battle.opponentScore}. DP Change: ${dpChange >= 0 ? '+' : ''}${dpChange} DP.`,
-          metadata: { battleId: battle.id }
         });
       }
     } else {
@@ -952,7 +816,7 @@ class DataStore {
     return false;
   }
 
-  // --- Friends Network & Requests ---
+  // --- Friends Network ---
   sendFriendRequest(username) {
     const clean = username.toLowerCase().replace('@', '').trim();
     const user = this.users.find(u => u.username.toLowerCase() === clean);
@@ -972,14 +836,6 @@ class DataStore {
     };
 
     this.friendRequests.push(req);
-    this.addNotification(user.id, {
-      type: 'friend_request',
-      category: 'friends',
-      title: 'Study Circle Invitation',
-      message: `${this.getCurrentUser().name} (@${this.getCurrentUser().username}) sent you a study circle connection request.`,
-      metadata: { requestId: req.id }
-    });
-
     this.saveState();
     return { success: true, request: req };
   }
@@ -993,16 +849,11 @@ class DataStore {
 
     const sender = this.users.find(u => u.id === req.senderId) || {
       id: req.senderId || `user_${Date.now()}`,
-      name: req.name || req.senderName || 'Scholar Peer',
-      username: req.username || (req.name || req.senderName || 'peer').toLowerCase().replace(/\s+/g, '_'),
-      handle: req.handle || ('@' + (req.name || req.senderName || 'peer').toLowerCase().replace(/\s+/g, '_')),
-      avatar: req.avatar || req.senderAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-      level: req.level || req.senderLevel || 10,
-      subject: req.subject || 'STEM General',
-      dp: req.dp || 2400,
-      streak: req.streak || 3,
-      winRate: req.winRate || '75%',
-      tier: req.tier || req.rank || 'Scholar'
+      name: req.senderName || 'Scholar Peer',
+      username: (req.senderName || 'peer').toLowerCase().replace(/\s+/g, '_'),
+      avatar: req.senderAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+      level: 10,
+      dp: 2400
     };
 
     const newFriend = {
@@ -1013,14 +864,12 @@ class DataStore {
       avatar: sender.avatar,
       level: sender.level || 10,
       onlineStatus: 'online',
-      subject: sender.subject || 'STEM General',
+      subject: sender.selectedSubjects?.[0] || 'Academic General',
       relationshipTag: 'Guild Mate',
       rank: sender.tier || sender.rank || 'Scholar',
       dp: sender.dp || 2500,
       streak: sender.streak || 3,
-      winRate: sender.winRate || '75%',
-      difficulty: sender.difficulty || 'medium',
-      personality: sender.personality || 'Tactical Duelist'
+      winRate: '75%'
     };
 
     if (!this.friends.some(f => f.id === newFriend.id)) {
@@ -1031,18 +880,10 @@ class DataStore {
       this.currentUserId,
       'friend_connected',
       'Study Circle Expanded',
-      `Connected with ${newFriend.name} (${newFriend.handle || '@' + newFriend.username}).`,
+      `Connected with ${newFriend.name}.`,
       '#8b5cf6',
       'Users'
     );
-
-    this.addNotification(this.currentUserId, {
-      type: 'friend_accepted',
-      category: 'friends',
-      title: 'Connection Accepted',
-      message: `You are now connected with ${newFriend.name}.`,
-      metadata: { friendId: newFriend.id }
-    });
 
     this.saveState();
     return { success: true, friend: newFriend };
@@ -1068,7 +909,7 @@ class DataStore {
     return false;
   }
 
-  // --- Notifications & Feed ---
+  // --- Notifications ---
   addNotification(userId, { type, category, title, message, metadata }) {
     const notif = {
       id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
@@ -1101,7 +942,7 @@ class DataStore {
   }
 
   // --- Activities Ledger ---
-  addActivity(userId, type, title, text, color = '#00f59b', icon = 'Sparkles', dp = 0) {
+  addActivity(userId, type, title, text, color = '#0df2c9', icon = 'Sparkles', dp = 0) {
     const act = {
       id: `act_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
       userId,
@@ -1117,6 +958,11 @@ class DataStore {
     this.activities.unshift(act);
     this.saveState();
     return act;
+  }
+
+  getUserActivities(userId = null) {
+    const targetUserId = userId || this.currentUserId;
+    return this.activities.filter(a => a.userId === targetUserId || (!a.userId && targetUserId === 'user_1'));
   }
 }
 

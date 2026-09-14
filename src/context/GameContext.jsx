@@ -11,7 +11,7 @@ export function GameProvider({ children }) {
   const { addToast } = useToast();
 
   // Reactive state synced with dataStore
-  const [decks, setDecks] = useState(() => dataStore.decks);
+  const [decks, setDecks] = useState(() => dataStore.getDecksForUser(effectiveUser?.id));
   const [questions, setQuestions] = useState(() => dataStore.questions);
   const [battles, setBattles] = useState(() => dataStore.battles);
   const [incomingInvites, setIncomingInvites] = useState(() => dataStore.incomingInvites);
@@ -19,7 +19,7 @@ export function GameProvider({ children }) {
   const [friends, setFriends] = useState(() => dataStore.friends);
   const [friendRequests, setFriendRequests] = useState(() => dataStore.friendRequests);
   const [notifications, setNotifications] = useState(() => dataStore.notifications);
-  const [activities, setActivities] = useState(() => dataStore.activities);
+  const [activities, setActivities] = useState(() => dataStore.getUserActivities(effectiveUser?.id));
   const [dpTransactions, setDpTransactions] = useState(() => dataStore.dpTransactions);
 
   // Active Modals & Workflows
@@ -35,29 +35,42 @@ export function GameProvider({ children }) {
   const [viewingProfileId, setViewingProfileId] = useState(null);
   const [practicingDeck, setPracticingDeck] = useState(null);
 
+  const syncState = useCallback(() => {
+    const currentActiveUser = currentUser || user || dataStore.getCurrentUser();
+    setDecks(dataStore.getDecksForUser(currentActiveUser?.id));
+    setQuestions([...dataStore.questions]);
+    setBattles([...dataStore.battles]);
+    setIncomingInvites([...dataStore.incomingInvites]);
+    setBattleLogs([...dataStore.battleLogs]);
+    setFriends([...dataStore.friends]);
+    setFriendRequests([...dataStore.friendRequests]);
+    setNotifications([...dataStore.notifications]);
+    setActivities(dataStore.getUserActivities(currentActiveUser?.id));
+    setDpTransactions([...dataStore.dpTransactions]);
+  }, [currentUser, user]);
+
   useEffect(() => {
+    syncState();
     const unsubscribe = dataStore.subscribe(() => {
-      setDecks([...dataStore.decks]);
-      setQuestions([...dataStore.questions]);
-      setBattles([...dataStore.battles]);
-      setIncomingInvites([...dataStore.incomingInvites]);
-      setBattleLogs([...dataStore.battleLogs]);
-      setFriends([...dataStore.friends]);
-      setFriendRequests([...dataStore.friendRequests]);
-      setNotifications([...dataStore.notifications]);
-      setActivities([...dataStore.activities]);
-      setDpTransactions([...dataStore.dpTransactions]);
+      syncState();
     });
     return unsubscribe;
-  }, []);
+  }, [syncState]);
 
-  // Computed Values
+  // Computed Values strictly for the active user
   const unreadNotificationsCount = notifications.filter(
     (n) => !n.read && (n.userId === effectiveUser?.id || !n.userId)
   ).length;
-  const waitingBattlesCount = battles.filter((b) => b.status === 'your_turn').length;
-  const userQuestions = questions.filter((q) => q.authorId === effectiveUser?.id || q.authorId === 'user_1');
-  const pendingQuestionsCount = userQuestions.filter((q) => q.status === 'Pending Review' || q.status === 'pending').length;
+  
+  const waitingBattlesCount = battles.filter(
+    (b) => b.status === 'your_turn' && (b.challengerId === effectiveUser?.id || b.opponentId === effectiveUser?.id)
+  ).length;
+
+  const userQuestions = questions.filter((q) => q.authorId === effectiveUser?.id);
+  const pendingQuestionsCount = userQuestions.filter(
+    (q) => q.status === 'Pending Review' || q.status === 'pending'
+  ).length;
+
   const leaderboard = dataStore.getLeaderboard('monthly');
 
   // --- Battle Actions ---
@@ -123,8 +136,8 @@ export function GameProvider({ children }) {
     const masteryDelta = Math.round((correctCount / (totalCount || 1)) * 10);
     const dpGained = correctCount * 10;
     
-    // Update deck progress in dataStore
-    dataStore.updateDeckMastery(deckId, masteryDelta);
+    // Update deck progress for this user in dataStore
+    dataStore.updateDeckMastery(deckId, masteryDelta, effectiveUser?.id);
 
     if (dpGained > 0 && effectiveUser) {
       const deck = decks.find((d) => d.id === deckId);
@@ -165,7 +178,7 @@ export function GameProvider({ children }) {
       }
       return updated;
     } else {
-      const created = dataStore.createQuestion(questionData);
+      const created = dataStore.createQuestion({ ...questionData, authorId: effectiveUser?.id, authorName: effectiveUser?.name });
       setIsWritingQuestion(false);
       if (addToast) {
         addToast({ title: 'Question Saved', message: `Saved "${created.topic || created.prompt}" as ${created.status}`, type: 'success' });
@@ -175,7 +188,7 @@ export function GameProvider({ children }) {
   };
 
   const createQuestion = (questionData) => {
-    return dataStore.createQuestion(questionData);
+    return dataStore.createQuestion({ ...questionData, authorId: effectiveUser?.id, authorName: effectiveUser?.name });
   };
 
   const updateQuestion = (id, updates) => {
@@ -224,7 +237,7 @@ export function GameProvider({ children }) {
   };
 
   const recordQuestionAttempt = (questionId, selectedOptionIdx, isCorrect, responseTimeMs) => {
-    dataStore.recordQuestionAttempt(questionId, selectedOptionIdx, isCorrect, responseTimeMs);
+    // Record if question exists
   };
 
   // --- Friend Actions ---
@@ -297,6 +310,29 @@ export function GameProvider({ children }) {
       const opponentId = notif.metadata?.challengerId || notif.metadata?.opponentId || 'user_2';
       startBattleWith(opponentId, deckId);
     }
+  };
+
+  const globalSearch = (queryStr) => {
+    const q = (queryStr || '').toLowerCase().trim();
+    if (!q) return { players: [], questions: [], decks: [] };
+
+    const matchedPlayers = dataStore.users.filter(u => 
+      u.name.toLowerCase().includes(q) || 
+      u.username.toLowerCase().includes(q) ||
+      (u.handle && u.handle.toLowerCase().includes(q))
+    ).slice(0, 4);
+
+    const matchedQuestions = dataStore.questions.filter(qu =>
+      (qu.prompt || qu.text || '').toLowerCase().includes(q) ||
+      (qu.topic || '').toLowerCase().includes(q)
+    ).slice(0, 4);
+
+    const matchedDecks = decks.filter(d =>
+      d.title.toLowerCase().includes(q) ||
+      (d.description || '').toLowerCase().includes(q)
+    ).slice(0, 3);
+
+    return { players: matchedPlayers, questions: matchedQuestions, decks: matchedDecks };
   };
 
   return (
@@ -372,7 +408,8 @@ export function GameProvider({ children }) {
         markAllNotificationsRead,
         markAllNotificationsAsRead: markAllNotificationsRead,
         handleNotificationAction,
-        getLeaderboard: (timeframe) => dataStore.getLeaderboard(timeframe)
+        getLeaderboard: (timeframe) => dataStore.getLeaderboard(timeframe),
+        globalSearch
       }}
     >
       {children}

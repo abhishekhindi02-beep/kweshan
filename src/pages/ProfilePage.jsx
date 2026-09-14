@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   User, Award, Flame, Trophy, TrendingUp, Sparkles, 
-  BookOpen, ShieldCheck, Edit3, Check, Calendar, School, Zap, Swords, UserPlus 
+  BookOpen, ShieldCheck, Edit3, Check, Calendar, School, Zap, Swords, UserPlus, FileText 
 } from 'lucide-react';
 import Badge from '../components/common/Badge';
 import ProgressBar from '../components/common/ProgressBar';
 import Avatar from '../components/common/Avatar';
 import ChallengeModal from '../components/battles/ChallengeModal';
+import QuestionDetailModal from '../components/questions/QuestionDetailModal';
 import { useAuth } from '../context/AuthContext';
 import { useGame } from '../context/GameContext';
 import { useToast } from '../context/ToastContext';
@@ -17,7 +18,7 @@ export default function ProfilePage() {
   const navigate = useNavigate();
   const { user, currentUser, allUsers, updateUser } = useAuth();
   const effectiveCurrentUser = currentUser || user;
-  const { dpTransactions, questions, battles, sendFriendRequest } = useGame();
+  const { questions, battles, sendFriendRequest } = useGame();
   const { showToast } = useToast();
 
   // Determine if viewing own profile or another player's profile
@@ -30,27 +31,28 @@ export default function ProfilePage() {
         handle: '@scholar',
         institution: 'Academic Guild',
         bio: 'Competitive duel scholar and problem solver.',
-        dp: 2150,
-        streak: 5,
-        level: 4,
-        rank: 'Master Tier',
+        dp: 0,
+        streak: 0,
+        level: 1,
+        rank: 'Scholar Tier',
         avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-        wins: 28,
-        losses: 11,
-        totalBattles: 39
+        wins: 0,
+        losses: 0,
+        totalBattles: 0
       });
 
   const [isEditing, setIsEditing] = useState(false);
-  const [name, setName] = useState(profileUser?.name || 'Dr. Alex Rivera');
-  const [handle, setHandle] = useState(profileUser?.handle || profileUser?.username ? `@${profileUser.username}` : '@alexrivera');
-  const [institution, setInstitution] = useState(profileUser?.institution || 'Stanford University • Dept of Biosciences');
-  const [bio, setBio] = useState(profileUser?.bio || 'Cellular biology researcher & competitive quiz enthusiast.');
+  const [name, setName] = useState(profileUser?.name || 'Dr. Elena Rostova');
+  const [handle, setHandle] = useState(profileUser?.handle || (profileUser?.username ? `@${profileUser.username}` : '@scholar'));
+  const [institution, setInstitution] = useState(profileUser?.institution || 'MIT • Dept of Theoretical Physics');
+  const [bio, setBio] = useState(profileUser?.bio || 'Theoretical mechanics buff & differential equations specialist.');
   const [isChallengeOpen, setIsChallengeOpen] = useState(false);
+  const [viewingDetailQuestion, setViewingDetailQuestion] = useState(null);
 
   const authoredQuestions = questions.filter(q => q.authorId === profileUser?.id);
   const avgQuality = authoredQuestions.length > 0
-    ? Math.round(authoredQuestions.reduce((acc, q) => acc + (q.qualityScore || q.qualityScores?.composite || 85), 0) / authoredQuestions.length)
-    : 92;
+    ? Math.round(authoredQuestions.reduce((acc, q) => acc + (q.qualityScores?.composite || q.qualityScore || 85), 0) / authoredQuestions.length)
+    : (profileUser?.dp > 0 ? 92 : 0);
 
   const handleSaveProfile = (e) => {
     e.preventDefault();
@@ -63,11 +65,15 @@ export default function ProfilePage() {
     sendFriendRequest(profileUser.username || profileUser.name);
   };
 
+  const winRateFormatted = profileUser?.totalBattles > 0
+    ? `${Math.round(((profileUser.wins || 0) / profileUser.totalBattles) * 100)}%`
+    : '0%';
+
   const badges = [
-    { name: 'Grandmaster Author', desc: 'Authored 5+ questions with 90+ quality score', icon: Sparkles, color: 'text-[#0df2c9]', bg: 'bg-[#0df2c9]/10' },
-    { name: 'Lightning Master', desc: 'Achieved 10/10 in Daily Lightning Arena', icon: Zap, color: 'text-amber-400', bg: 'bg-amber-400/10' },
-    { name: '7-Day Scholar Flame', desc: 'Maintained consecutive 7-day study streak', icon: Flame, color: 'text-rose-400', bg: 'bg-rose-400/10' },
-    { name: 'Distinction Pioneer', desc: 'Reached Top 1% Global Distinction Leaderboard', icon: Trophy, color: 'text-purple-400', bg: 'bg-purple-400/10' },
+    { name: 'Grandmaster Author', desc: 'Authored questions with 90+ quality score', icon: Sparkles, color: 'text-[#0df2c9]', bg: 'bg-[#0df2c9]/10' },
+    { name: 'Lightning Master', desc: 'Participated in Daily Lightning Arena', icon: Zap, color: 'text-amber-400', bg: 'bg-amber-400/10' },
+    { name: 'Scholar Flame', desc: 'Maintained active daily study streak', icon: Flame, color: 'text-rose-400', bg: 'bg-rose-400/10' },
+    { name: 'Distinction Pioneer', desc: 'Ranked in Distinction Leaderboard', icon: Trophy, color: 'text-purple-400', bg: 'bg-purple-400/10' },
   ];
 
   return (
@@ -94,15 +100,17 @@ export default function ProfilePage() {
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <h1 className="text-xl sm:text-2xl font-black text-white">{profileUser?.name}</h1>
-                <Badge variant="mint">{profileUser?.rank || profileUser?.tier || 'Grandmaster'}</Badge>
+                <Badge variant="mint">{profileUser?.rank || profileUser?.tier || 'Scholar Tier'}</Badge>
               </div>
-              <p className="text-xs sm:text-sm font-mono text-[#0df2c9]">{profileUser?.handle || (profileUser?.username ? `@${profileUser.username}` : '@scholar')}</p>
+              <p className="text-xs sm:text-sm font-mono text-[#0df2c9]">
+                {profileUser?.handle || (profileUser?.username ? `@${profileUser.username}` : '@scholar')}
+              </p>
               <p className="text-xs text-slate-300 flex items-center gap-1.5 pt-1">
                 <School className="w-3.5 h-3.5 text-slate-400" />
-                {profileUser?.institution || 'Academic Institute of Sciences'}
+                {profileUser?.institution || 'Academic Scholar Guild'}
               </p>
               <p className="text-xs text-slate-400 pt-0.5 max-w-md">
-                "{profileUser?.bio || 'Scholar actively competing in peer duels and authoring verification items.'}"
+                "{profileUser?.bio || 'Competitive scholar on Kweshun.'}"
               </p>
             </div>
           </div>
@@ -205,38 +213,90 @@ export default function ProfilePage() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="bg-[#111927] border border-[#22334d] p-4 rounded-2xl text-center">
           <div className="text-slate-400 text-xs font-medium">Distinction Points</div>
-          <div className="text-2xl font-black font-mono text-[#0df2c9] mt-1">{profileUser?.dp?.toLocaleString()}</div>
-          <div className="text-[10px] text-slate-500 font-mono">Rank #1 Global</div>
+          <div className="text-2xl font-black font-mono text-[#0df2c9] mt-1">
+            {(profileUser?.dp || 0).toLocaleString()}
+          </div>
+          <div className="text-[10px] text-slate-500 font-mono">
+            {profileUser?.tier || 'Scholar Tier'}
+          </div>
         </div>
 
         <div className="bg-[#111927] border border-[#22334d] p-4 rounded-2xl text-center">
           <div className="text-slate-400 text-xs font-medium">Win Rate</div>
           <div className="text-2xl font-black font-mono text-white mt-1">
-            {profileUser?.totalBattles > 0 ? `${Math.round((profileUser.wins / profileUser.totalBattles) * 100)}%` : '78.4%'}
+            {winRateFormatted}
           </div>
-          <div className="text-[10px] text-emerald-400 font-medium">
-            {profileUser?.wins || 32}W / {profileUser?.losses || 9}L
+          <div className="text-[10px] text-emerald-400 font-medium font-mono">
+            {profileUser?.wins || 0}W / {profileUser?.losses || 0}L
           </div>
         </div>
 
         <div className="bg-[#111927] border border-[#22334d] p-4 rounded-2xl text-center">
           <div className="text-slate-400 text-xs font-medium">Questions Authored</div>
-          <div className="text-2xl font-black font-mono text-white mt-1">{authoredQuestions.length || 6}</div>
-          <div className="text-[10px] text-purple-400 font-medium">Peer Reviewed</div>
+          <div className="text-2xl font-black font-mono text-white mt-1">{authoredQuestions.length}</div>
+          <div className="text-[10px] text-purple-400 font-medium">Long-Form Items</div>
         </div>
 
         <div className="bg-[#111927] border border-[#22334d] p-4 rounded-2xl text-center">
           <div className="text-slate-400 text-xs font-medium">Avg Quality Rating</div>
           <div className="text-2xl font-black font-mono text-amber-400 mt-1">{avgQuality}/100</div>
-          <div className="text-[10px] text-slate-500 font-mono">Grade A+</div>
+          <div className="text-[10px] text-slate-500 font-mono">
+            {avgQuality >= 90 ? 'Grade A+' : avgQuality >= 80 ? 'Grade A' : 'Grade B'}
+          </div>
         </div>
+      </div>
+
+      {/* Authored Questions Repository by this user */}
+      <div className="bg-[#111927] border border-[#22334d] rounded-3xl p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-base font-bold text-white flex items-center gap-2">
+            <FileText className="w-5 h-5 text-[#0df2c9]" />
+            Authored Academic Questions ({authoredQuestions.length})
+          </h3>
+          {isSelf && (
+            <button
+              onClick={() => navigate('/questions/new')}
+              className="text-xs font-bold text-[#0df2c9] hover:underline cursor-pointer"
+            >
+              + Author New Question
+            </button>
+          )}
+        </div>
+
+        {authoredQuestions.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {authoredQuestions.map((q) => (
+              <div
+                key={q.id}
+                onClick={() => setViewingDetailQuestion(q)}
+                className="p-4 bg-[#0b101b] border border-[#22334d] hover:border-[#0df2c9]/40 rounded-2xl cursor-pointer transition-all space-y-2 group"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-mono text-[#8b5cf6] font-bold uppercase truncate">
+                    {q.topic || q.deckName}
+                  </span>
+                  <Badge variant={q.status === 'Live' ? 'live' : 'pending'} size="xs">
+                    {q.status || 'Live'}
+                  </Badge>
+                </div>
+                <p className="text-xs text-white line-clamp-2 group-hover:text-[#0df2c9] transition-colors leading-relaxed">
+                  {q.prompt || q.text}
+                </p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="p-8 text-center text-xs text-slate-500 bg-[#0b101b] rounded-2xl border border-[#1b273a]">
+            No questions created yet by this scholar.
+          </div>
+        )}
       </div>
 
       {/* Academic Honors & Badges */}
       <div className="bg-[#111927] border border-[#22334d] rounded-3xl p-6 space-y-4">
         <h3 className="text-base font-bold text-white flex items-center gap-2">
           <Trophy className="w-5 h-5 text-amber-400" />
-          Academic Honors & Earned Badges
+          Academic Honors & Distinction Badges
         </h3>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -248,8 +308,8 @@ export default function ProfilePage() {
                   <Icon className="w-6 h-6" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-bold text-white">{b.name}</h4>
-                  <p className="text-xs text-slate-400 mt-0.5">{b.desc}</p>
+                  <div className="text-sm font-bold text-white">{b.name}</div>
+                  <div className="text-xs text-slate-400 mt-0.5">{b.desc}</div>
                 </div>
               </div>
             );
@@ -257,43 +317,16 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* Distinction Ledger (DP History) */}
-      {isSelf && (
-        <div className="bg-[#111927] border border-[#22334d] rounded-3xl p-6 space-y-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <h3 className="text-base font-bold text-white flex items-center gap-2">
-              <Award className="w-5 h-5 text-[#0df2c9]" />
-              Distinction Ledger (DP Transaction History)
-            </h3>
-            <span className="text-xs text-slate-400 font-mono">
-              {dpTransactions.length} Transactions
-            </span>
-          </div>
-
-          <div className="divide-y divide-[#1b273a]">
-            {dpTransactions.map((tx) => (
-              <div key={tx.id} className="py-3 flex items-center justify-between text-xs">
-                <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 rounded-full bg-[#0df2c9]" />
-                  <div>
-                    <div className="font-semibold text-white">{tx.reason}</div>
-                    <div className="text-[10px] text-slate-500 font-mono">{tx.timestamp || tx.createdAt?.substring(0, 10)}</div>
-                  </div>
-                </div>
-                <div className="font-mono font-bold text-[#0df2c9]">
-                  +{tx.amount} DP
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Challenge Modal */}
+      {/* Modals */}
       <ChallengeModal
         isOpen={isChallengeOpen}
         onClose={() => setIsChallengeOpen(false)}
-        initialOpponentId={profileUser?.id}
+      />
+
+      <QuestionDetailModal
+        isOpen={Boolean(viewingDetailQuestion)}
+        onClose={() => setViewingDetailQuestion(null)}
+        question={viewingDetailQuestion}
       />
     </div>
   );
