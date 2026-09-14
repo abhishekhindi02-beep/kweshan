@@ -2,12 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   BookOpen, CheckCircle2, XCircle, ArrowRight, RotateCcw, 
   Trophy, Sparkles, Check, HelpCircle, Flame, Image as ImageIcon, 
-  PenTool, Sigma, FileText, Eye 
+  PenTool, Sigma, FileText, Eye, AlertCircle, Award
 } from 'lucide-react';
 import Modal from '../common/Modal';
 import Badge from '../common/Badge';
 import ProgressBar from '../common/ProgressBar';
 import { useGame } from '../../context/GameContext';
+import { evaluateWrittenAnswer } from '../../services/answerEvaluator';
 import confetti from 'canvas-confetti';
 
 export default function DeckPracticeModal({ isOpen, onClose, deck }) {
@@ -20,6 +21,7 @@ export default function DeckPracticeModal({ isOpen, onClose, deck }) {
   const [isAnswered, setIsAnswered] = useState(false);
   const [correctCount, setCorrectCount] = useState(0);
   const [isLongFormCorrect, setIsLongFormCorrect] = useState(null);
+  const [evaluationResult, setEvaluationResult] = useState(null);
   const [reattemptedQuestions, setReattemptedQuestions] = useState(new Set());
   const [isFinished, setIsFinished] = useState(false);
 
@@ -45,6 +47,7 @@ export default function DeckPracticeModal({ isOpen, onClose, deck }) {
       setWrittenAnswer('');
       setIsAnswered(false);
       setIsLongFormCorrect(null);
+      setEvaluationResult(null);
       setCorrectCount(0);
       setReattemptedQuestions(new Set());
       setIsFinished(false);
@@ -81,10 +84,19 @@ export default function DeckPracticeModal({ isOpen, onClose, deck }) {
 
     if (isLongForm) {
       setIsAnswered(true);
-      // Default to true or let user verify with self-evaluation
-      setIsLongFormCorrect(true);
-      if (!reattemptedQuestions.has(currentIndex)) {
+      // Run intelligent academic grading evaluation on the user's written response
+      const evalResult = evaluateWrittenAnswer(writtenAnswer, currentQ);
+      setEvaluationResult(evalResult);
+
+      const passes = evalResult.isCorrect;
+      setIsLongFormCorrect(passes);
+
+      if (passes && !reattemptedQuestions.has(currentIndex)) {
         setCorrectCount((prev) => prev + 1);
+      }
+
+      if (recordQuestionAttempt && currentQ?.id) {
+        recordQuestionAttempt(currentQ.id, writtenAnswer, passes, 4000);
       }
     } else {
       if (selectedOption === null) return;
@@ -117,6 +129,7 @@ export default function DeckPracticeModal({ isOpen, onClose, deck }) {
     setWrittenAnswer('');
     setIsAnswered(false);
     setIsLongFormCorrect(null);
+    setEvaluationResult(null);
   };
 
   const handleNext = () => {
@@ -126,6 +139,7 @@ export default function DeckPracticeModal({ isOpen, onClose, deck }) {
       setWrittenAnswer('');
       setIsAnswered(false);
       setIsLongFormCorrect(null);
+      setEvaluationResult(null);
     } else {
       setIsFinished(true);
       try {
@@ -303,61 +317,130 @@ export default function DeckPracticeModal({ isOpen, onClose, deck }) {
             </div>
           )}
 
-          {/* Detailed Concept & Derivation once answered */}
+          {/* Academic Evaluation Verdict & Canonical Derivation once answered */}
           {isAnswered && (
-            <div className="p-4 rounded-2xl border space-y-3 bg-[#0d1627] border-[#0df2c9]/40 animate-fadeIn transition-all">
-              <div className="flex items-center justify-between">
-                <div className="text-xs font-bold text-[#0df2c9] flex items-center gap-1.5">
-                  <Check className="w-4 h-4" />
-                  Canonical Solution & Derivation Proof
-                </div>
-                <div className="text-[10px] font-mono uppercase text-slate-400">
-                  Peer Verified
-                </div>
-              </div>
+            <div className="space-y-3 animate-fadeIn">
+              {/* Intelligent Grading Card for Long-Form */}
+              {isLongForm && evaluationResult && (
+                <div
+                  className={`p-4 rounded-2xl border transition-all ${
+                    isLongFormCorrect
+                      ? 'bg-emerald-950/30 border-emerald-500/40 shadow-sm shadow-emerald-500/10'
+                      : 'bg-rose-950/30 border-rose-500/40 shadow-sm shadow-rose-500/10'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      {isLongFormCorrect ? (
+                        <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                      ) : (
+                        <XCircle className="w-5 h-5 text-rose-400" />
+                      )}
+                      <span
+                        className={`text-xs sm:text-sm font-black uppercase tracking-wider ${
+                          isLongFormCorrect ? 'text-emerald-400' : 'text-rose-400'
+                        }`}
+                      >
+                        {isLongFormCorrect
+                          ? 'Automated Evaluation: Verified (+10 DP)'
+                          : 'Automated Evaluation: Incorrect / Needs Review (0 DP)'}
+                      </span>
+                    </div>
+                    <span className="font-mono text-xs font-bold text-slate-400">
+                      Score: {isLongFormCorrect ? '10/10' : '0/10'}
+                    </span>
+                  </div>
 
-              <p className="text-xs sm:text-sm text-slate-200 leading-relaxed whitespace-pre-line">
-                {currentQ.explanation || 'According to standard academic principles, the governing formulation holds as derived.'}
-              </p>
+                  <p className="text-xs sm:text-sm text-slate-200 mt-2 leading-relaxed">
+                    {evaluationResult.feedback}
+                  </p>
 
-              {(currentQ.citation || currentQ.citations) && (
-                <div className="text-[11px] text-slate-400 font-mono pt-1 border-t border-slate-700/40">
-                  Reference: {currentQ.citation || currentQ.citations}
-                </div>
-              )}
+                  {/* Concept breakdown tags */}
+                  <div className="mt-3 pt-3 border-t border-slate-700/40 space-y-2">
+                    {evaluationResult.matchedConcepts?.length > 0 && (
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="text-[11px] font-semibold text-emerald-400 mr-1">Matched:</span>
+                        {evaluationResult.matchedConcepts.map((c, i) => (
+                          <span
+                            key={i}
+                            className="px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-mono text-[10px]"
+                          >
+                            ✓ {c}
+                          </span>
+                        ))}
+                      </div>
+                    )}
 
-              {/* Self-check evaluation for long-form questions */}
-              {isLongForm && (
-                <div className="pt-2 border-t border-[#1e293b] flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-xs text-slate-300 font-semibold">
-                    Did your derivation match the proof?
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleMarkLongFormResult(true)}
-                      className={`px-3 py-1 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
-                        isLongFormCorrect === true
-                          ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300 shadow-sm'
-                          : 'bg-[#111927] border-[#22334d] text-slate-400 hover:text-white'
-                      }`}
-                    >
-                      ✓ Yes, Got it Right (+10 DP)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleMarkLongFormResult(false)}
-                      className={`px-3 py-1 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
-                        isLongFormCorrect === false
-                          ? 'bg-rose-500/20 border-rose-400 text-rose-300'
-                          : 'bg-[#111927] border-[#22334d] text-slate-400 hover:text-white'
-                      }`}
-                    >
-                      ✗ Need Review
-                    </button>
+                    {!isLongFormCorrect && evaluationResult.missingConcepts?.length > 0 && (
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="text-[11px] font-semibold text-rose-400 mr-1">Missing Components:</span>
+                        {evaluationResult.missingConcepts.map((c, i) => (
+                          <span
+                            key={i}
+                            className="px-2 py-0.5 rounded bg-rose-500/15 border border-rose-500/30 text-rose-300 font-mono text-[10px]"
+                          >
+                            ✗ {c}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Manual Override Control */}
+                  <div className="mt-3 pt-2.5 border-t border-slate-700/40 flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-[11px] text-slate-400">
+                      Solved on paper or disagree with auto-grade?
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleMarkLongFormResult(true)}
+                        className={`px-3 py-1 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
+                          isLongFormCorrect === true
+                            ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300'
+                            : 'bg-[#111927] border-[#22334d] text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        ✓ Mark Correct (+10 DP)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleMarkLongFormResult(false)}
+                        className={`px-3 py-1 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
+                          isLongFormCorrect === false
+                            ? 'bg-rose-500/20 border-rose-400 text-rose-300'
+                            : 'bg-[#111927] border-[#22334d] text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        ✗ Mark Incorrect (0 DP)
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
+
+              {/* Canonical Solution Card */}
+              <div className="p-4 rounded-2xl border space-y-3 bg-[#0d1627] border-[#0df2c9]/40">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-bold text-[#0df2c9] flex items-center gap-1.5">
+                    <Check className="w-4 h-4" />
+                    Canonical Solution & Derivation Proof
+                  </div>
+                  <div className="text-[10px] font-mono uppercase text-slate-400">
+                    Peer Verified
+                  </div>
+                </div>
+
+                <p className="text-xs sm:text-sm text-slate-200 leading-relaxed whitespace-pre-line">
+                  {currentQ.explanation || 'According to standard academic principles, the governing formulation holds as derived.'}
+                </p>
+
+                {(currentQ.citation || currentQ.citations) && (
+                  <div className="text-[11px] text-slate-400 font-mono pt-1 border-t border-slate-700/40">
+                    Reference: {currentQ.citation || currentQ.citations}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
