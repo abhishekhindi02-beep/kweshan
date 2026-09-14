@@ -247,15 +247,49 @@ export default function DeckPracticeModal({ isOpen, onClose, deck }) {
           {/* Answering Area: Long-Form Written vs Multiple Choice */}
           {isLongForm ? (
             <div className="space-y-3">
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                Your Written Derivation / Solution:
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                  Your Written Derivation / Solution:
+                </label>
+                {!isAnswered && (
+                  <span className="text-[11px] text-[#0df2c9] font-medium flex items-center gap-1">
+                    💡 Requires key formulas & steps for +10 DP
+                  </span>
+                )}
+              </div>
+
+              {/* Quick Math Notation Bar */}
+              {!isAnswered && (
+                <div className="p-2.5 rounded-xl bg-[#090d16] border border-[#22334d] flex flex-wrap items-center gap-1.5">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 mr-1">Insert Symbols:</span>
+                  {[
+                    { label: 'ΣFx', insert: 'ΣFx = m·ax' },
+                    { label: 'ΣFy', insert: 'ΣFy = m·ay' },
+                    { label: 'F=ma', insert: 'F = m·a' },
+                    { label: 'a=√(ax²+ay²)', insert: 'a = √((ΣFx/m)² + (ΣFy/m)²)' },
+                    { label: 'θ', insert: 'θ' },
+                    { label: '√', insert: '√' },
+                    { label: 'Σ', insert: 'Σ' },
+                    { label: '²', insert: '²' }
+                  ].map((sym, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setWrittenAnswer((prev) => (prev ? prev + ' ' + sym.insert : sym.insert))}
+                      className="px-2 py-1 rounded bg-[#111927] hover:bg-[#1b273a] border border-[#22334d] hover:border-[#0df2c9]/50 text-slate-300 hover:text-[#0df2c9] font-mono text-[11px] transition-all cursor-pointer"
+                    >
+                      {sym.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+
               <textarea
                 rows={3}
                 disabled={isAnswered}
                 value={writtenAnswer}
                 onChange={(e) => setWrittenAnswer(e.target.value)}
-                placeholder="Write your derivation steps, formulas, or explanation (or solve on paper and check canonical solution below)..."
+                placeholder="Explain the physical principle, resolve Cartesian components (ΣFx, ΣFy), and derive the net acceleration..."
                 className="w-full bg-[#0b101b] border border-[#22334d] rounded-2xl p-3.5 text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-[#0df2c9] transition-colors leading-relaxed disabled:opacity-80"
               />
             </div>
@@ -325,45 +359,41 @@ export default function DeckPracticeModal({ isOpen, onClose, deck }) {
                 <div
                   className={`p-4 rounded-2xl border transition-all ${
                     isLongFormCorrect
-                      ? 'bg-emerald-950/30 border-emerald-500/40 shadow-sm shadow-emerald-500/10'
-                      : 'bg-rose-950/30 border-rose-500/40 shadow-sm shadow-rose-500/10'
+                      ? 'bg-emerald-950/40 border-emerald-500/50 shadow-md shadow-emerald-500/10'
+                      : 'bg-rose-950/40 border-rose-500/50 shadow-md shadow-rose-500/10'
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       {isLongFormCorrect ? (
-                        <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                        <CheckCircle2 className="w-6 h-6 text-emerald-400 flex-shrink-0" />
                       ) : (
-                        <XCircle className="w-5 h-5 text-rose-400" />
+                        <XCircle className="w-6 h-6 text-rose-400 flex-shrink-0" />
                       )}
-                      <span
-                        className={`text-xs sm:text-sm font-black uppercase tracking-wider ${
-                          isLongFormCorrect ? 'text-emerald-400' : 'text-rose-400'
-                        }`}
-                      >
-                        {isLongFormCorrect
-                          ? 'Automated Evaluation: Verified (+10 DP)'
-                          : 'Automated Evaluation: Incorrect / Needs Review (0 DP)'}
-                      </span>
+                      <div>
+                        <span
+                          className={`text-sm font-black uppercase tracking-wider block ${
+                            isLongFormCorrect ? 'text-emerald-400' : 'text-rose-400'
+                          }`}
+                        >
+                          {isLongFormCorrect ? '✅ CORRECT ANSWER (+10 DP AWARDED)' : '❌ WRONG ANSWER (0 DP AWARDED)'}
+                        </span>
+                        <p className="text-xs text-slate-300 mt-0.5">
+                          {evaluationResult.feedback}
+                        </p>
+                      </div>
                     </div>
-                    <span className="font-mono text-xs font-bold text-slate-400">
-                      Score: {isLongFormCorrect ? '10/10' : '0/10'}
-                    </span>
                   </div>
-
-                  <p className="text-xs sm:text-sm text-slate-200 mt-2 leading-relaxed">
-                    {evaluationResult.feedback}
-                  </p>
 
                   {/* Concept breakdown tags */}
                   <div className="mt-3 pt-3 border-t border-slate-700/40 space-y-2">
                     {evaluationResult.matchedConcepts?.length > 0 && (
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="text-[11px] font-semibold text-emerald-400 mr-1">Matched:</span>
+                        <span className="text-[11px] font-semibold text-emerald-400 mr-1">Matched Concepts:</span>
                         {evaluationResult.matchedConcepts.map((c, i) => (
                           <span
                             key={i}
-                            className="px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-mono text-[10px]"
+                            className="px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-mono text-[10px] font-bold"
                           >
                             ✓ {c}
                           </span>
@@ -373,11 +403,11 @@ export default function DeckPracticeModal({ isOpen, onClose, deck }) {
 
                     {!isLongFormCorrect && evaluationResult.missingConcepts?.length > 0 && (
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="text-[11px] font-semibold text-rose-400 mr-1">Missing Components:</span>
+                        <span className="text-[11px] font-semibold text-rose-400 mr-1">Missing Required Components:</span>
                         {evaluationResult.missingConcepts.map((c, i) => (
                           <span
                             key={i}
-                            className="px-2 py-0.5 rounded bg-rose-500/15 border border-rose-500/30 text-rose-300 font-mono text-[10px]"
+                            className="px-2 py-0.5 rounded bg-rose-500/20 border border-rose-500/40 text-rose-300 font-mono text-[10px]"
                           >
                             ✗ {c}
                           </span>
@@ -385,53 +415,24 @@ export default function DeckPracticeModal({ isOpen, onClose, deck }) {
                       </div>
                     )}
                   </div>
-
-                  {/* Manual Override Control */}
-                  <div className="mt-3 pt-2.5 border-t border-slate-700/40 flex flex-wrap items-center justify-between gap-2">
-                    <span className="text-[11px] text-slate-400">
-                      Solved on paper or disagree with auto-grade?
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => handleMarkLongFormResult(true)}
-                        className={`px-3 py-1 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
-                          isLongFormCorrect === true
-                            ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300'
-                            : 'bg-[#111927] border-[#22334d] text-slate-400 hover:text-white'
-                        }`}
-                      >
-                        ✓ Mark Correct (+10 DP)
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleMarkLongFormResult(false)}
-                        className={`px-3 py-1 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
-                          isLongFormCorrect === false
-                            ? 'bg-rose-500/20 border-rose-400 text-rose-300'
-                            : 'bg-[#111927] border-[#22334d] text-slate-400 hover:text-white'
-                        }`}
-                      >
-                        ✗ Mark Incorrect (0 DP)
-                      </button>
-                    </div>
-                  </div>
                 </div>
               )}
 
-              {/* Canonical Solution Card */}
+              {/* Canonical Correct Answer & Derivation Card */}
               <div className="p-4 rounded-2xl border space-y-3 bg-[#0d1627] border-[#0df2c9]/40">
                 <div className="flex items-center justify-between">
                   <div className="text-xs font-bold text-[#0df2c9] flex items-center gap-1.5">
                     <Check className="w-4 h-4" />
-                    Canonical Solution & Derivation Proof
+                    {!isLongFormCorrect && isLongForm
+                      ? '📖 Complete Correct Answer & Derivation Steps'
+                      : 'Canonical Solution & Derivation Proof'}
                   </div>
-                  <div className="text-[10px] font-mono uppercase text-slate-400">
-                    Peer Verified
+                  <div className="text-[10px] font-mono uppercase text-slate-400 bg-[#111927] px-2 py-0.5 rounded-full border border-[#22334d]">
+                    Academic Standard
                   </div>
                 </div>
 
-                <p className="text-xs sm:text-sm text-slate-200 leading-relaxed whitespace-pre-line">
+                <p className="text-xs sm:text-sm text-slate-200 leading-relaxed whitespace-pre-line font-sans">
                   {currentQ.explanation || 'According to standard academic principles, the governing formulation holds as derived.'}
                 </p>
 

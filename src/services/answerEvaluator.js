@@ -1,12 +1,14 @@
 // Smart Academic Answer Evaluator for Kweshun
-// Evaluates written long-form solutions against canonical proofs and problem concepts
+// Evaluates written long-form solutions with strict academic criteria
 
 const STOP_WORDS = new Set([
   'a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'for', 'from',
   'has', 'he', 'in', 'is', 'it', 'its', 'of', 'on', 'that', 'the',
   'to', 'was', 'were', 'will', 'with', 'this', 'these', 'those',
   'then', 'so', 'if', 'or', 'such', 'can', 'could', 'should', 'would',
-  'how', 'what', 'when', 'where', 'which', 'who', 'why'
+  'how', 'what', 'when', 'where', 'which', 'who', 'why', 'i', 'my',
+  'me', 'you', 'your', 'we', 'our', 'they', 'them', 'their', 'very',
+  'much', 'like', 'good', 'think', 'know', 'see', 'just', 'also'
 ]);
 
 function tokenize(text) {
@@ -18,32 +20,34 @@ function tokenize(text) {
     .filter((w) => w.length > 1 && !STOP_WORDS.has(w));
 }
 
-function extractKeyConcepts(question) {
+export function extractKeyConcepts(question) {
   const explanation = question?.explanation || '';
   const prompt = question?.prompt || question?.text || '';
 
   const concepts = new Set();
 
-  // Extract explicit formulas/equations
+  // Extract explicit formulas/equations (e.g., Fx=m*ax, F=ma, a=sqrt(ax^2+ay^2))
   const mathMatches = (explanation + ' ' + (question?.equation || '')).match(/[A-Za-zΣθλαβγΔ0-9\+\-\*\/\=\^\(\)\_\.\√]{2,}/g) || [];
-  mathMatches.slice(0, 6).forEach((m) => {
-    if (m.includes('=') || m.includes('+') || m.includes('^') || m.includes('/') || m.includes('Σ') || m.includes('\\')) {
+  mathMatches.slice(0, 8).forEach((m) => {
+    if (m.includes('=') || m.includes('+') || m.includes('^') || m.includes('/') || m.includes('Σ') || m.includes('√') || m.includes('*')) {
       concepts.add(m.trim().toLowerCase());
     }
   });
 
-  // Common technical terms extraction
+  // Common technical terms extraction from explanation
   const tokens = tokenize(explanation);
   const freq = {};
   tokens.forEach((t) => {
     freq[t] = (freq[t] || 0) + 1;
   });
 
-  // Pick top distinctive tokens
+  // Pick top distinctive technical tokens
   Object.keys(freq)
     .sort((a, b) => freq[b] - freq[a])
     .slice(0, 8)
-    .forEach((term) => concepts.add(term));
+    .forEach((term) => {
+      if (term.length > 2) concepts.add(term);
+    });
 
   return Array.from(concepts);
 }
@@ -51,26 +55,25 @@ function extractKeyConcepts(question) {
 export function evaluateWrittenAnswer(userAnswer, question) {
   const answer = (userAnswer || '').trim();
   const cleanAnswer = answer.toLowerCase();
+  const keyConcepts = extractKeyConcepts(question);
 
-  // 1. Length & substance check (e.g. "ba", "idk", 1-2 words)
-  if (!cleanAnswer || cleanAnswer.length < 10 || cleanAnswer.split(/\s+/).length < 3) {
+  // 1. Minimum Length and Word Count Check (gibberish/one-liner like "ba", "idk", "asdf")
+  if (!cleanAnswer || cleanAnswer.length < 15 || cleanAnswer.split(/\s+/).length < 4) {
     return {
       isCorrect: false,
-      isPartial: false,
       scorePercent: 0,
       awardedDP: 0,
-      gradeLabel: 'Needs Review (0 DP)',
+      gradeLabel: 'Wrong Answer (0 DP)',
       status: 'incorrect',
       matchedConcepts: [],
-      missingConcepts: extractKeyConcepts(question).slice(0, 4),
-      feedback: 'Your answer is too short or missing key derivation steps and equations.'
+      missingConcepts: keyConcepts.slice(0, 4),
+      feedback: 'Your answer is incorrect because it is too brief and does not include any mathematical derivation or physical laws.'
     };
   }
 
-  const keyConcepts = extractKeyConcepts(question);
   const userTokens = new Set(tokenize(cleanAnswer));
   
-  // Track matched vs missing concepts
+  // 2. Track matched vs missing concepts
   const matchedConcepts = [];
   const missingConcepts = [];
 
@@ -82,65 +85,44 @@ export function evaluateWrittenAnswer(userAnswer, question) {
     }
   });
 
-  // Mathematical reasoning indicators
-  const hasFormulas = /[\=\+\-\*\/\^\√\Σ]/.test(cleanAnswer);
-  const hasReasoningWords = /(because|therefore|since|resolving|substituting|derive|components|equals|yields|integrate|differentiate|vector|force|law|direction|magnitude)/i.test(cleanAnswer);
+  // 3. Mathematical and Formula presence
+  const hasFormulaSymbols = /[\=\+\-\*\/\^\√\Σ]/.test(cleanAnswer);
+  const hasKeyMathTokens = /(fx|fy|ax|ay|fnet|f_net|sigma|sqrt|root|cos|sin|component|orthogonal|vector|acceleration|newton|second law|m\*a|ma)/i.test(cleanAnswer);
+  
+  const conceptRatio = keyConcepts.length > 0 ? (matchedConcepts.length / keyConcepts.length) : 0;
 
-  // Concept match ratio
-  const conceptRatio = keyConcepts.length > 0 ? (matchedConcepts.length / keyConcepts.length) : 0.4;
+  // Strict Evaluation: Must match at least 40% of technical concepts AND have formulas or math tokens
+  const isStrictlyCorrect = (conceptRatio >= 0.40 && (hasFormulaSymbols || hasKeyMathTokens)) || 
+                            (matchedConcepts.length >= 3 && cleanAnswer.length >= 35);
 
-  // Length and depth factor (up to 25 pts)
-  const depthScore = Math.min(25, cleanAnswer.length / 5);
-
-  // Concept score (up to 50 pts)
-  const conceptScore = conceptRatio * 50;
-
-  // Mathematical/Reasoning score (up to 25 pts)
-  const mathScore = (hasFormulas ? 15 : 0) + (hasReasoningWords ? 10 : 0);
-
-  let totalScore = Math.round(depthScore + conceptScore + mathScore);
-  totalScore = Math.min(100, Math.max(0, totalScore));
-
-  let isCorrect = false;
-  let isPartial = false;
-  let awardedDP = 0;
-  let gradeLabel = 'Needs Review (0 DP)';
-  let status = 'incorrect';
-  let feedback = '';
-
-  if (totalScore >= 60 && conceptRatio >= 0.35) {
-    isCorrect = true;
-    awardedDP = 10;
-    gradeLabel = 'Mastery Verified (+10 DP)';
-    status = 'correct';
-    feedback = 'Excellent work! Your derivation accurately aligns with physical principles and canonical mathematical formulation.';
-  } else if (totalScore >= 30 || conceptRatio >= 0.20 || cleanAnswer.length >= 25) {
-    isPartial = true;
-    awardedDP = 5;
-    gradeLabel = 'Partial Credit (+5 DP)';
-    status = 'partial';
-    feedback = 'Good attempt. You touched upon key principles, but some derivation steps or formula components were omitted.';
-  } else {
-    isCorrect = false;
-    awardedDP = 0;
-    gradeLabel = 'Needs Review (0 DP)';
-    status = 'incorrect';
-    feedback = 'Your response did not match the expected academic derivation or key formula components.';
+  if (isStrictlyCorrect) {
+    return {
+      isCorrect: true,
+      scorePercent: Math.min(100, Math.round(conceptRatio * 100) + 20),
+      awardedDP: 10,
+      gradeLabel: 'Correct! (+10 DP)',
+      status: 'correct',
+      matchedConcepts,
+      missingConcepts,
+      feedback: 'Great job! Your answer accurately explains the physical principles and includes the necessary derivation steps.'
+    };
   }
 
+  // Otherwise, it is WRONG (0 DP)
   return {
-    isCorrect,
-    isPartial,
-    scorePercent: totalScore,
-    awardedDP,
-    gradeLabel,
-    status,
+    isCorrect: false,
+    scorePercent: Math.round(conceptRatio * 50),
+    awardedDP: 0,
+    gradeLabel: 'Wrong Answer (0 DP)',
+    status: 'incorrect',
     matchedConcepts,
-    missingConcepts,
-    feedback
+    missingConcepts: missingConcepts.length > 0 ? missingConcepts : keyConcepts.slice(0, 4),
+    feedback: 'Your answer is incorrect. It does not provide the required physical derivation steps or governing formulas.'
   };
 }
 
 export default {
-  evaluateWrittenAnswer
+  evaluateWrittenAnswer,
+  extractKeyConcepts
 };
+
