@@ -277,7 +277,54 @@ export const initialQuestions = [
   // DECK 1: AP Physics 1: Mechanics
   // -------------------------------------------------------------
   {
+    id: 'Q-1000',
+    type: 'long-form',
+    source: 'curriculum',
+    authorId: 'user_1',
+    authorName: 'Dr. Elena Rostova',
+    deckId: 'deck_1',
+    deckName: 'AP Physics 1: Mechanics',
+    category: 'Science',
+    topic: "Newton's Second Law & Cartesian Resolution",
+    text: "Explain how Newton's second law can be used to determine the net acceleration of a body when multiple forces act at non-orthogonal angles. Derive the Cartesian components.",
+    prompt: "Explain how Newton's second law can be used to determine the net acceleration of a body when multiple forces act at non-orthogonal angles. Derive the Cartesian components.",
+    explanation: "Resolving forces along Cartesian axes: ΣFx = m·ax and ΣFy = m·ay. For forces at angles θi, ΣFx = Σ Fi·cos(θi) and ΣFy = Σ Fi·sin(θi). The component accelerations are ax = ΣFx/m and ay = ΣFy/m. The resultant net acceleration magnitude is given by a = √(ax² + ay²) = √((ΣFx/m)² + (ΣFy/m)²).",
+    canonicalSolution: "1. State Newton's Second Law: ΣF = m·a.\n2. Resolve all non-orthogonal forces into orthogonal Cartesian components:\n   ΣFx = Σ Fi·cos(θi)\n   ΣFy = Σ Fi·sin(θi)\n3. Relate component forces to component accelerations:\n   ax = ΣFx / m\n   ay = ΣFy / m\n4. Synthesize the resultant acceleration magnitude:\n   a = √(ax² + ay²) = √((ΣFx/m)² + (ΣFy/m)²)\n   Direction: θ = arctan(ΣFy / ΣFx).",
+    expectedConcepts: [
+      "Newton's second law (F = ma)",
+      "Cartesian x & y component decomposition",
+      "Trigonometric force resolution (cos θ / sin θ)",
+      "Sum of forces (ΣFx and ΣFy)",
+      "Resultant net acceleration magnitude synthesis"
+    ],
+    requiredFormulas: [
+      "ΣFx = m·ax (or ax = ΣFx/m)",
+      "ΣFy = m·ay (or ay = ΣFy/m)",
+      "a = √(ax² + ay²)"
+    ],
+    citation: "Halliday, Resnick, & Walker, Fundamentals of Physics 11th Ed., Ch. 5 (Force and Motion)",
+    citations: "Halliday, Resnick, & Walker, Fundamentals of Physics 11th Ed., Ch. 5 (Force and Motion)",
+    difficulty: 'hard',
+    status: 'Live',
+    attachments: {
+      images: [],
+      drawings: [],
+      equations: ["ΣFx = m·ax", "ΣFy = m·ay", "a = √(ax² + ay²)"]
+    },
+    equations: ["ΣFx = m·ax", "ΣFy = m·ay", "a = √(ax² + ay²)"],
+    tags: ['Mechanics', 'Vectors', 'Newtonian Dynamics', 'Long-form'],
+    qualityScores: { originality: 98, factualVerification: 99, difficultyBalance: 95, answerDistinction: 96, sourceCitations: 98, composite: 97, grade: 'A+' },
+    plays: 420,
+    correctAttempts: 240,
+    incorrectAttempts: 180,
+    accuracy: 57,
+    dpEarned: 30,
+    createdAt: new Date(Date.now() - 30 * 86400000).toISOString()
+  },
+  {
     id: 'Q-1001',
+    type: 'mcq',
+    source: 'curriculum',
     authorId: 'user_1',
     deckId: 'deck_1',
     deckName: 'AP Physics 1: Mechanics',

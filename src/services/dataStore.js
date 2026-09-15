@@ -13,19 +13,95 @@ import {
 } from './mockData.js';
 import { calculateQualityScores } from './qualityScorer.js';
 import storageService, { STORAGE_KEYS } from './storageService.js';
+import { extractKeyConcepts } from './answerEvaluator.js';
 
 const STORAGE_KEY = 'kweshun_multi_user_store_v4';
 
 export function normalizeQuestion(q) {
   if (!q) return null;
-  const promptText = q.prompt || q.text || q.question || '';
-  const isLongForm = Boolean(q.image || q.drawing || (Array.isArray(q.equations) && q.equations.length > 0) || !q.options || q.options.length === 0);
+  const promptText = (q.prompt || q.text || q.question || '').trim();
+  
+  // 1. Determine question type ("long-form" vs "mcq")
+  let type = q.type;
+  if (!type) {
+    const hasAttachments = Boolean(q.image || q.drawing || q.figure || (Array.isArray(q.equations) && q.equations.length > 0));
+    const hasOptions = Array.isArray(q.options) && q.options.length > 0;
+    if (q.source === 'user' || hasAttachments || !hasOptions) {
+      type = 'long-form';
+    } else {
+      type = 'mcq';
+    }
+  }
 
+  // 2. Determine source ("user" vs "curriculum")
+  const source = q.source || (q.authorId && q.authorId.startsWith('user_') && q.id && q.id.startsWith('user-') ? 'user' : (q.authorId === 'curriculum' ? 'curriculum' : (type === 'long-form' && !q.id?.startsWith('Q-') ? 'user' : 'curriculum')));
+
+  // 3. Normalize Attachments
+  const images = Array.isArray(q.attachments?.images) 
+    ? q.attachments.images 
+    : (q.image || q.imageUrl ? [q.image || q.imageUrl] : []);
+  const drawings = Array.isArray(q.attachments?.drawings) 
+    ? q.attachments.drawings 
+    : (q.drawing || q.figure ? [q.drawing || q.figure] : []);
+  const equations = Array.isArray(q.attachments?.equations) 
+    ? q.attachments.equations 
+    : (Array.isArray(q.equations) ? q.equations : (q.equation ? [q.equation] : []));
+
+  const attachments = {
+    images,
+    drawings,
+    equations
+  };
+
+  let canonicalStatus = 'Live';
+  const rawStatus = (q.status || 'Live').toLowerCase();
+  if (rawStatus === 'draft') canonicalStatus = 'Draft';
+  else if (rawStatus === 'pending' || rawStatus === 'pending review') canonicalStatus = 'Pending Review';
+  else canonicalStatus = 'Live';
+
+  const qualityScores = q.qualityScores || calculateQualityScores(q);
+
+  if (type === 'long-form') {
+    // LONG-FORM QUESTION MODEL (NO MCQ options, NO correctAnswerIndex)
+    return {
+      id: q.id || `user-q-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      type: 'long-form',
+      source,
+      authorId: q.authorId || 'user_1',
+      authorName: q.authorName || 'Scholar',
+      deckId: q.deckId || 'deck_1',
+      deckName: q.deckName || 'AP Physics 1: Mechanics',
+      category: q.category || 'Science',
+      topic: q.topic || promptText.slice(0, 45) || 'Academic Concept',
+      text: promptText,
+      prompt: promptText,
+      explanation: q.explanation || q.canonicalSolution || 'Detailed academic derivation and proof.',
+      canonicalSolution: q.canonicalSolution || q.explanation || 'Detailed academic derivation and proof.',
+      citation: q.citation || q.citations || 'Academic Standard Reference',
+      citations: q.citations || q.citation || 'Academic Standard Reference',
+      difficulty: q.difficulty ? (q.difficulty.charAt(0).toUpperCase() + q.difficulty.slice(1).toLowerCase()) : 'Medium',
+      status: canonicalStatus,
+      attachments,
+      // Backward compatibility fields
+      image: images[0] || null,
+      drawing: drawings[0] || null,
+      equations,
+      expectedConcepts: q.expectedConcepts || extractKeyConcepts(q),
+      requiredFormulas: q.requiredFormulas || equations,
+      tags: Array.isArray(q.tags) ? q.tags : ['Academic', 'Long-form'],
+      plays: q.plays ?? 0,
+      accuracy: q.accuracy ?? 75,
+      dpEarned: q.dpEarned ?? (canonicalStatus === 'Live' ? 30 : 0),
+      qualityScores,
+      createdAt: q.createdAt || new Date().toISOString()
+    };
+  }
+
+  // MULTIPLE CHOICE QUESTION MODEL
   let correctIdx = typeof q.correctAnswerIndex === 'number' 
     ? q.correctAnswerIndex 
     : (typeof q.correctIndex === 'number' ? q.correctIndex : 0);
-  
-  // Format options consistently if multiple choice
+
   const formattedOptions = Array.isArray(q.options) && q.options.length > 0 ? q.options.map((opt, i) => {
     if (typeof opt === 'string') {
       return {
@@ -41,39 +117,72 @@ export function normalizeQuestion(q) {
       text: opt.text || '',
       isCorrect
     };
-  }) : [];
-
-  const qualityScores = q.qualityScores || calculateQualityScores(q);
-
-  let canonicalStatus = 'Live';
-  const rawStatus = (q.status || 'Live').toLowerCase();
-  if (rawStatus === 'draft') canonicalStatus = 'Draft';
-  else if (rawStatus === 'pending' || rawStatus === 'pending review') canonicalStatus = 'Pending Review';
-  else canonicalStatus = 'Live';
+  }) : [
+    { id: 'opt_1', text: 'Option A', isCorrect: true },
+    { id: 'opt_2', text: 'Option B', isCorrect: false },
+    { id: 'opt_3', text: 'Option C', isCorrect: false },
+    { id: 'opt_4', text: 'Option D', isCorrect: false }
+  ];
 
   return {
-    ...q,
     id: q.id || `Q-${Math.floor(1000 + Math.random() * 9000)}`,
+    type: 'mcq',
+    source: 'curriculum',
+    authorId: q.authorId || 'curriculum',
+    authorName: q.authorName || 'Curriculum Council',
+    deckId: q.deckId || 'deck_1',
+    deckName: q.deckName || 'General Academic Deck',
+    category: q.category || 'Science',
+    topic: q.topic || promptText.slice(0, 45) || 'Curriculum Concept',
     text: promptText,
     prompt: promptText,
     options: formattedOptions,
     correctAnswerIndex: correctIdx,
     correctIndex: correctIdx,
-    explanation: q.explanation || 'Detailed academic derivation and proof.',
-    citation: q.citation || q.citations || 'Academic Standard Reference',
-    citations: q.citations || q.citation || 'Academic Standard Reference',
+    explanation: q.explanation || 'According to standard curriculum principles.',
+    citation: q.citation || q.citations || 'Curriculum Standard Reference',
+    citations: q.citations || q.citation || 'Curriculum Standard Reference',
     difficulty: q.difficulty ? (q.difficulty.charAt(0).toUpperCase() + q.difficulty.slice(1).toLowerCase()) : 'Medium',
     status: canonicalStatus,
-    image: q.image || q.imageUrl || null,
-    drawing: q.drawing || q.figure || null,
-    equations: Array.isArray(q.equations) ? q.equations : (q.equation ? [q.equation] : []),
-    tags: Array.isArray(q.tags) ? q.tags : ['Academic', 'Long-form'],
+    attachments: { images: [], drawings: [], equations: [] },
+    tags: Array.isArray(q.tags) ? q.tags : ['Curriculum', 'MCQ'],
     plays: q.plays ?? 0,
-    accuracy: q.accuracy ?? 75,
-    dpEarned: q.dpEarned ?? (canonicalStatus === 'Live' ? 30 : 0),
+    accuracy: q.accuracy ?? 70,
+    dpEarned: q.dpEarned ?? 0,
     qualityScores,
     createdAt: q.createdAt || new Date().toISOString()
   };
+}
+
+export function validateQuestionBank(questions) {
+  if (!Array.isArray(questions)) return [];
+  const seenIds = new Set();
+  const seenPrompts = new Set();
+  const validated = [];
+
+  for (const raw of questions) {
+    if (!raw) continue;
+    const q = normalizeQuestion(raw);
+    if (!q || !q.id) continue;
+
+    const promptKey = (q.prompt || q.text || '').trim().toLowerCase();
+
+    // Check duplicate ID
+    if (seenIds.has(q.id)) {
+      // If exact same prompt as well, skip duplicate
+      if (promptKey && seenPrompts.has(promptKey)) {
+        continue;
+      }
+      // If distinct question with accidental duplicate ID, make ID unique
+      q.id = `${q.id}-${Math.floor(1000 + Math.random() * 9000)}`;
+    }
+
+    seenIds.add(q.id);
+    if (promptKey) seenPrompts.add(promptKey);
+    validated.push(q);
+  }
+
+  return validated;
 }
 
 class DataStore {
@@ -92,7 +201,6 @@ class DataStore {
           const parsed = JSON.parse(saved);
           this.users = parsed.users || initialUsers;
           
-          // If a user was saved in storageService, sync it
           if (savedUser) {
             const idx = this.users.findIndex(u => u.id === savedUser.id);
             if (idx >= 0) {
@@ -104,7 +212,7 @@ class DataStore {
 
           this.currentUserId = parsed.currentUserId || (savedUser?.id || this.users[0]?.id || 'user_1');
           this.decks = parsed.decks || initialDecks;
-          this.questions = (parsed.questions || initialQuestions).map(normalizeQuestion);
+          this.questions = validateQuestionBank(parsed.questions || initialQuestions);
           this.battles = parsed.battles || initialBattles;
           this.incomingInvites = parsed.incomingInvites || initialIncomingInvites;
           this.battleLogs = parsed.battleLogs || initialBattleLogs;
@@ -412,6 +520,61 @@ class DataStore {
     return this.questions.find(q => q.id === id) || null;
   }
 
+  // --- Unique Question Selection for Deck Practice Sessions ---
+  getPracticeQuestions(deckId, count = 5) {
+    const validQuestions = validateQuestionBank(this.questions);
+
+    // Filter candidate questions by deckId or deckName
+    let candidates = validQuestions.filter(q => 
+      q && q.status === 'Live' && (q.deckId === deckId || q.deckName === deckId)
+    );
+
+    // Fallback if no questions are mapped directly to this deckId
+    if (candidates.length === 0) {
+      const deck = this.decks.find(d => d.id === deckId);
+      if (deck?.category) {
+        candidates = validQuestions.filter(q => q && q.status === 'Live' && q.category === deck.category);
+      }
+      if (candidates.length === 0) {
+        candidates = validQuestions.filter(q => q && q.status === 'Live');
+      }
+    }
+
+    // Deduplicate candidates by unique question ID
+    const uniqueMap = new Map();
+    candidates.forEach(q => {
+      if (q && q.id && !uniqueMap.has(q.id)) {
+        uniqueMap.set(q.id, q);
+      }
+    });
+
+    const uniqueCandidates = Array.from(uniqueMap.values());
+
+    // Prioritization: prioritize unpracticed questions, then lower play counts
+    const scored = uniqueCandidates.map(q => {
+      let priority = 100;
+      if (q.plays > 0) priority -= Math.min(50, q.plays * 2);
+      // Give authored long-form questions equal prominent rotation
+      if (q.type === 'long-form') priority += 5;
+      return { q, score: priority + Math.random() * 8 };
+    });
+
+    scored.sort((a, b) => b.score - a.score);
+
+    // Strictly enforce UNIQUE question IDs in this session
+    const selected = [];
+    const usedIds = new Set();
+    for (const item of scored) {
+      if (!usedIds.has(item.q.id)) {
+        usedIds.add(item.q.id);
+        selected.push(item.q);
+        if (selected.length >= count) break;
+      }
+    }
+
+    return selected;
+  }
+
   createQuestion(questionData) {
     const authorId = questionData.authorId || this.currentUserId;
     const user = this.getCurrentUser();
@@ -425,17 +588,21 @@ class DataStore {
       canonicalStatus = 'Pending Review';
     }
 
+    // User-authored questions are strictly LONG-FORM with no MCQ options
     const newQuestion = normalizeQuestion({
-      id: `Q-${Math.floor(1000 + Math.random() * 9000)}`,
+      id: `user-q-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`,
+      type: 'long-form',
+      source: 'user',
       authorId,
       authorName: questionData.authorName || user?.name || 'Scholar',
       deckId: questionData.deckId || 'deck_1',
-      deckName: questionData.deckName || 'General Academic Deck',
+      deckName: questionData.deckName || 'AP Physics 1: Mechanics',
       category: questionData.category || 'Science',
       topic: questionData.topic || questionData.prompt?.slice(0, 45) || 'Academic Concept',
       text: questionData.prompt || questionData.text,
       prompt: questionData.prompt || questionData.text,
       explanation: questionData.explanation || '',
+      canonicalSolution: questionData.canonicalSolution || questionData.explanation || '',
       citation: questionData.citation || questionData.citations || '',
       citations: questionData.citations || questionData.citation || '',
       difficulty: questionData.difficulty || 'Medium',
@@ -443,6 +610,11 @@ class DataStore {
       image: questionData.image || null,
       drawing: questionData.drawing || null,
       equations: questionData.equations || [],
+      attachments: {
+        images: questionData.image ? [questionData.image] : [],
+        drawings: questionData.drawing ? [questionData.drawing] : [],
+        equations: questionData.equations || []
+      },
       status: canonicalStatus,
       qualityScores,
       dpEarned: canonicalStatus === 'Live' ? 30 : 0,

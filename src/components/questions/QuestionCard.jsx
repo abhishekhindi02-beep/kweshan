@@ -58,6 +58,9 @@ export default function QuestionCard({
             <Badge variant={statusVariant} size="xs">
               {isLive ? 'LIVE' : isPending ? 'PENDING REVIEW' : 'DRAFT'}
             </Badge>
+            <Badge variant={question.type === 'long-form' || !question.options || question.options.length === 0 ? 'purple' : 'mint'} size="xs">
+              {question.type === 'long-form' || !question.options || question.options.length === 0 ? 'LONG-FORM' : 'MCQ'}
+            </Badge>
             <Badge variant={question.difficulty === 'Hard' ? 'danger' : question.difficulty === 'Medium' ? 'warning' : 'neutral'} size="xs">
               {question.difficulty || 'Medium'}
             </Badge>

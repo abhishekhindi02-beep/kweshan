@@ -42,6 +42,9 @@ export default function QuestionDetailModal({ isOpen, onClose, question, onEdit 
             <Badge variant={statusVariant}>
               {isLive ? 'LIVE IN ARENAS' : isPending ? 'PENDING REVIEW' : 'DRAFT'}
             </Badge>
+            <Badge variant={question.type === 'long-form' || !question.options || question.options.length === 0 ? 'purple' : 'mint'}>
+              {question.type === 'long-form' || !question.options || question.options.length === 0 ? 'LONG-FORM WRITTEN' : 'MULTIPLE CHOICE'}
+            </Badge>
             <Badge variant="purple">{question.deckName || question.category || 'General Academic'}</Badge>
             <Badge variant={question.difficulty === 'Hard' ? 'danger' : question.difficulty === 'Medium' ? 'warning' : 'neutral'}>
               {question.difficulty || 'Medium'}

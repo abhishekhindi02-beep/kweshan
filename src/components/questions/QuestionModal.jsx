@@ -149,6 +149,8 @@ export default function QuestionModal({ isOpen, onClose, question = null }) {
     const finalTopic = topic.trim() || prompt.trim().slice(0, 45) + '...';
 
     const payload = {
+      type: 'long-form',
+      source: 'user',
       deckId: selectedDeck.id,
       deckName: selectedDeck.title,
       category: selectedDeck.category || 'Science',
@@ -156,6 +158,7 @@ export default function QuestionModal({ isOpen, onClose, question = null }) {
       prompt: prompt.trim(),
       text: prompt.trim(),
       explanation: explanation.trim(),
+      canonicalSolution: explanation.trim(),
       citation: citation.trim(),
       citations: citation.trim(),
       difficulty,
@@ -166,6 +169,11 @@ export default function QuestionModal({ isOpen, onClose, question = null }) {
       image,
       drawing,
       equations,
+      attachments: {
+        images: image ? [image] : [],
+        drawings: drawing ? [drawing] : [],
+        equations: equations || []
+      },
       qualityScores: liveScore
     };
 

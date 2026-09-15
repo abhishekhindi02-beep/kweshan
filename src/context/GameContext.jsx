@@ -132,6 +132,10 @@ export function GameProvider({ children }) {
     setPracticingDeck(deck);
   };
 
+  const getPracticeQuestions = (deckId, count = 5) => {
+    return dataStore.getPracticeQuestions(deckId, count);
+  };
+
   const completePracticeDeck = (deckId, correctCount, totalCount) => {
     const masteryDelta = Math.round((correctCount / (totalCount || 1)) * 10);
     const dpGained = correctCount * 10;
@@ -388,6 +392,7 @@ export function GameProvider({ children }) {
         declineInvite,
         declineBattleInvite: declineInvite,
         startPracticeDeck,
+        getPracticeQuestions,
         completePracticeDeck,
         saveQuestion,
         createQuestion,
