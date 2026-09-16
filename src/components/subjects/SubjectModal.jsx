@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BookOpen, AlertCircle, Check } from 'lucide-react';
 import Modal from '../common/Modal';
 
@@ -28,7 +28,7 @@ export default function SubjectModal({
     }
   }, [isOpen, initialSubject, isEdit]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const cleanName = name.trim();
     if (!cleanName) {
@@ -37,19 +37,24 @@ export default function SubjectModal({
     }
 
     setIsSubmitting(true);
-    const res = onSubmit({
-      name: cleanName,
-      description: description.trim()
-    });
+    try {
+      const res = await onSubmit({
+        name: cleanName,
+        description: description.trim()
+      });
 
-    if (res && res.error) {
-      setError(res.error);
+      if (res && res.error) {
+        setError(res.error);
+        setIsSubmitting(false);
+        return;
+      }
+
       setIsSubmitting(false);
-      return;
+      onClose();
+    } catch (err) {
+      setError(err?.message || 'Failed to save subject.');
+      setIsSubmitting(false);
     }
-
-    setIsSubmitting(false);
-    onClose();
   };
 
   if (!isOpen) return null;

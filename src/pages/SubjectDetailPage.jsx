@@ -64,20 +64,24 @@ export default function SubjectDetailPage() {
     );
   }
 
-  const handleEditSubjectSubmit = (data) => {
-    return updateSubject(subject.id, data);
+  const handleEditSubjectSubmit = async (data) => {
+    return await updateSubject(subject.id, data);
   };
 
-  const handleConfirmDeleteSubject = () => {
-    deleteSubject(subject.id);
-    setIsDeleteSubjectOpen(false);
-    navigate('/subjects');
+  const handleConfirmDeleteSubject = async () => {
+    const res = await deleteSubject(subject.id);
+    if (!res?.error) {
+      setIsDeleteSubjectOpen(false);
+      navigate('/subjects');
+    }
   };
 
-  const handleConfirmDeleteQuestion = () => {
+  const handleConfirmDeleteQuestion = async () => {
     if (deleteQuestionTarget) {
-      deleteQuestion(deleteQuestionTarget.id);
-      setDeleteQuestionTarget(null);
+      const res = await deleteQuestion(deleteQuestionTarget.id);
+      if (!res?.error) {
+        setDeleteQuestionTarget(null);
+      }
     }
   };
 

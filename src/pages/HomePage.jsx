@@ -29,11 +29,11 @@ export default function HomePage() {
   const [editingSubject, setEditingSubject] = useState(null);
   const [deleteDialogData, setDeleteDialogData] = useState(null); // { type: 'subject'|'question', item: {...} }
 
-  const handleCreateSubjectSubmit = (data) => {
+  const handleCreateSubjectSubmit = async (data) => {
     if (editingSubject) {
-      return updateSubject(editingSubject.id, data);
+      return await updateSubject(editingSubject.id, data);
     }
-    return createSubject(data);
+    return await createSubject(data);
   };
 
   const handleEditSubject = (subject) => {
@@ -59,12 +59,12 @@ export default function HomePage() {
     });
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!deleteDialogData) return;
     if (deleteDialogData.type === 'subject') {
-      deleteSubject(deleteDialogData.item.id);
+      await deleteSubject(deleteDialogData.item.id);
     } else if (deleteDialogData.type === 'question') {
-      deleteQuestion(deleteDialogData.item.id);
+      await deleteQuestion(deleteDialogData.item.id);
     }
     setDeleteDialogData(null);
   };

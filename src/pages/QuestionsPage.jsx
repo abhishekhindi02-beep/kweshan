@@ -29,9 +29,9 @@ export default function QuestionsPage() {
     });
   }, [getQuestions, selectedSubjectId, selectedDifficulty, searchQuery, sortBy]);
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (deleteTarget) {
-      deleteQuestion(deleteTarget.id);
+      await deleteQuestion(deleteTarget.id);
       setDeleteTarget(null);
     }
   };

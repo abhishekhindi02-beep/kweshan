@@ -31,11 +31,11 @@ export default function SubjectsPage() {
     );
   });
 
-  const handleModalSubmit = (data) => {
+  const handleModalSubmit = async (data) => {
     if (editingSubject) {
-      return updateSubject(editingSubject.id, data);
+      return await updateSubject(editingSubject.id, data);
     }
-    return createSubject(data);
+    return await createSubject(data);
   };
 
   const handleEdit = (subject) => {
@@ -47,9 +47,9 @@ export default function SubjectsPage() {
     setDeleteTarget(subject);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (deleteTarget) {
-      deleteSubject(deleteTarget.id);
+      await deleteSubject(deleteTarget.id);
       setDeleteTarget(null);
     }
   };

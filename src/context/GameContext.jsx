@@ -46,8 +46,8 @@ export function GameProvider({ children }) {
     return dataStore.getSubjectById(subjectId, effectiveUser?.id);
   }, [effectiveUser]);
 
-  const createSubject = useCallback(({ name, description }) => {
-    const res = dataStore.createSubject({
+  const createSubject = useCallback(async ({ name, description }) => {
+    const res = await dataStore.createSubject({
       userId: effectiveUser?.id,
       name,
       description
@@ -61,8 +61,8 @@ export function GameProvider({ children }) {
     return res;
   }, [effectiveUser, syncState]);
 
-  const updateSubject = useCallback((subjectId, { name, description }) => {
-    const res = dataStore.updateSubject(subjectId, { name, description }, effectiveUser?.id);
+  const updateSubject = useCallback(async (subjectId, { name, description }) => {
+    const res = await dataStore.updateSubject(subjectId, { name, description }, effectiveUser?.id);
     if (res.error) {
       notifyToast(res.error, 'error', 'Subject Update');
       return res;
@@ -72,9 +72,9 @@ export function GameProvider({ children }) {
     return res;
   }, [effectiveUser, syncState]);
 
-  const deleteSubject = useCallback((subjectId) => {
+  const deleteSubject = useCallback(async (subjectId) => {
     const subject = dataStore.getSubjectById(subjectId, effectiveUser?.id);
-    const res = dataStore.deleteSubject(subjectId, effectiveUser?.id);
+    const res = await dataStore.deleteSubject(subjectId, effectiveUser?.id);
     if (res.error) {
       notifyToast(res.error, 'error', 'Delete Subject');
       return res;
@@ -93,8 +93,8 @@ export function GameProvider({ children }) {
     return dataStore.getQuestionsForUser(effectiveUser?.id, options);
   }, [effectiveUser]);
 
-  const createQuestion = useCallback((questionData) => {
-    const res = dataStore.createQuestion({
+  const createQuestion = useCallback(async (questionData) => {
+    const res = await dataStore.createQuestion({
       userId: effectiveUser?.id,
       ...questionData
     });
@@ -107,8 +107,8 @@ export function GameProvider({ children }) {
     return res;
   }, [effectiveUser, syncState]);
 
-  const updateQuestion = useCallback((questionId, updates) => {
-    const res = dataStore.updateQuestion(questionId, updates, effectiveUser?.id);
+  const updateQuestion = useCallback(async (questionId, updates) => {
+    const res = await dataStore.updateQuestion(questionId, updates, effectiveUser?.id);
     if (res.error) {
       notifyToast(res.error, 'error', 'Update Question');
       return res;
@@ -118,8 +118,8 @@ export function GameProvider({ children }) {
     return res;
   }, [effectiveUser, syncState]);
 
-  const deleteQuestion = useCallback((questionId) => {
-    const res = dataStore.deleteQuestion(questionId, effectiveUser?.id);
+  const deleteQuestion = useCallback(async (questionId) => {
+    const res = await dataStore.deleteQuestion(questionId, effectiveUser?.id);
     if (res.error) {
       notifyToast(res.error, 'error', 'Delete Question');
       return res;

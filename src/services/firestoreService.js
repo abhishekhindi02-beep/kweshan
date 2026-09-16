@@ -10,32 +10,56 @@ import {
   where, 
   onSnapshot 
 } from 'firebase/firestore';
-import { db } from './firebase.js';
+import { db, auth } from './firebase.js';
 
 class FirestoreService {
+  getAuthUid(userId) {
+    return userId || auth.currentUser?.uid || null;
+  }
+
+  formatError(e, action = 'Operation') {
+    console.error(`Firestore ${action} error:`, e);
+    if (e?.code === 'permission-denied') {
+      return 'Permission denied: Please ensure your Firestore Security Rules in Firebase Console allow read/write for authenticated users.';
+    }
+    if (e?.code === 'unauthenticated') {
+      return 'You must be signed in to perform this action.';
+    }
+    if (e?.code === 'unavailable') {
+      return 'Firestore service is currently unavailable. Please check your internet connection.';
+    }
+    return e?.message || `${action} failed.`;
+  }
+
   // --- USER PROFILE OPERATIONS ---
   async saveUserProfile(uid, profileData) {
+    const effectiveUid = this.getAuthUid(uid);
+    if (!effectiveUid) {
+      return { error: 'Authentication required to save profile.' };
+    }
     try {
-      const userRef = doc(db, 'users', uid);
+      const userRef = doc(db, 'users', effectiveUid);
       const data = {
         ...profileData,
-        uid,
+        uid: effectiveUid,
+        id: effectiveUid,
         updatedAt: new Date().toISOString()
       };
       await setDoc(userRef, data, { merge: true });
       return { success: true, user: data };
     } catch (e) {
-      console.error('Firestore saveUserProfile error:', e);
-      return { error: e.message };
+      return { error: this.formatError(e, 'saveUserProfile') };
     }
   }
 
   async getUserProfile(uid) {
+    const effectiveUid = this.getAuthUid(uid);
+    if (!effectiveUid) return null;
     try {
-      const userRef = doc(db, 'users', uid);
+      const userRef = doc(db, 'users', effectiveUid);
       const snap = await getDoc(userRef);
       if (snap.exists()) {
-        return snap.data();
+        return { id: snap.id, ...snap.data() };
       }
       return null;
     } catch (e) {
@@ -51,7 +75,7 @@ class FirestoreService {
       const q = query(collection(db, 'users'), where('username', '==', clean));
       const snap = await getDocs(q);
       if (!snap.empty) {
-        return snap.docs[0].data();
+        return { id: snap.docs[0].id, ...snap.docs[0].data() };
       }
       return null;
     } catch (e) {
@@ -62,9 +86,10 @@ class FirestoreService {
 
   // --- SUBJECTS OPERATIONS ---
   async getSubjects(userId) {
-    if (!userId) return [];
+    const effectiveUid = this.getAuthUid(userId);
+    if (!effectiveUid) return [];
     try {
-      const q = query(collection(db, 'subjects'), where('userId', '==', userId));
+      const q = query(collection(db, 'subjects'), where('userId', '==', effectiveUid));
       const snap = await getDocs(q);
       const list = [];
       snap.forEach(docSnap => {
@@ -78,11 +103,15 @@ class FirestoreService {
   }
 
   async createSubject({ id, userId, name, description = '' }) {
+    const effectiveUid = this.getAuthUid(userId);
+    if (!effectiveUid) {
+      return { error: 'Authentication required to create a subject in Firestore.' };
+    }
     try {
       const subjectId = id || ('subj_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8));
       const newSubject = {
         id: subjectId,
-        userId,
+        userId: effectiveUid,
         name: name.trim(),
         description: (description || '').trim(),
         createdAt: new Date().toISOString(),
@@ -91,12 +120,15 @@ class FirestoreService {
       await setDoc(doc(db, 'subjects', subjectId), newSubject);
       return { success: true, subject: newSubject };
     } catch (e) {
-      console.error('Firestore createSubject error:', e);
-      return { error: e.message };
+      return { error: this.formatError(e, 'createSubject') };
     }
   }
 
   async updateSubject(subjectId, updates, userId) {
+    const effectiveUid = this.getAuthUid(userId);
+    if (!effectiveUid) {
+      return { error: 'Authentication required to update subject.' };
+    }
     try {
       const subRef = doc(db, 'subjects', subjectId);
       const data = {
@@ -104,37 +136,40 @@ class FirestoreService {
         updatedAt: new Date().toISOString()
       };
       await updateDoc(subRef, data);
-      return { success: true, subject: { id: subjectId, userId, ...data } };
+      return { success: true, subject: { id: subjectId, userId: effectiveUid, ...data } };
     } catch (e) {
-      console.error('Firestore updateSubject error:', e);
-      return { error: e.message };
+      return { error: this.formatError(e, 'updateSubject') };
     }
   }
 
   async deleteSubject(subjectId, userId) {
+    const effectiveUid = this.getAuthUid(userId);
+    if (!effectiveUid) {
+      return { error: 'Authentication required to delete subject.' };
+    }
     try {
       await deleteDoc(doc(db, 'subjects', subjectId));
       // Delete questions belonging to this subject
       const qQuery = query(
         collection(db, 'questions'),
         where('subjectId', '==', subjectId),
-        where('userId', '==', userId)
+        where('userId', '==', effectiveUid)
       );
       const qSnap = await getDocs(qQuery);
       const deletePromises = qSnap.docs.map(d => deleteDoc(d.ref));
       await Promise.all(deletePromises);
       return { success: true };
     } catch (e) {
-      console.error('Firestore deleteSubject error:', e);
-      return { error: e.message };
+      return { error: this.formatError(e, 'deleteSubject') };
     }
   }
 
   // --- QUESTIONS OPERATIONS ---
   async getQuestions(userId) {
-    if (!userId) return [];
+    const effectiveUid = this.getAuthUid(userId);
+    if (!effectiveUid) return [];
     try {
-      const q = query(collection(db, 'questions'), where('userId', '==', userId));
+      const q = query(collection(db, 'questions'), where('userId', '==', effectiveUid));
       const snap = await getDocs(q);
       const list = [];
       snap.forEach(docSnap => {
@@ -148,23 +183,31 @@ class FirestoreService {
   }
 
   async createQuestion(questionData) {
+    const effectiveUid = this.getAuthUid(questionData.userId);
+    if (!effectiveUid) {
+      return { error: 'Authentication required to save question in Firestore.' };
+    }
     try {
       const qId = questionData.id || ('question_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8));
       const newQuestion = {
         ...questionData,
         id: qId,
+        userId: effectiveUid,
         createdAt: questionData.createdAt || new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
       await setDoc(doc(db, 'questions', qId), newQuestion);
       return { success: true, question: newQuestion };
     } catch (e) {
-      console.error('Firestore createQuestion error:', e);
-      return { error: e.message };
+      return { error: this.formatError(e, 'createQuestion') };
     }
   }
 
   async updateQuestion(questionId, updates, userId) {
+    const effectiveUid = this.getAuthUid(userId);
+    if (!effectiveUid) {
+      return { error: 'Authentication required to update question in Firestore.' };
+    }
     try {
       const qRef = doc(db, 'questions', questionId);
       const data = {
@@ -172,47 +215,51 @@ class FirestoreService {
         updatedAt: new Date().toISOString()
       };
       await updateDoc(qRef, data);
-      return { success: true, question: { id: questionId, userId, ...data } };
+      return { success: true, question: { id: questionId, userId: effectiveUid, ...data } };
     } catch (e) {
-      console.error('Firestore updateQuestion error:', e);
-      return { error: e.message };
+      return { error: this.formatError(e, 'updateQuestion') };
     }
   }
 
   async deleteQuestion(questionId, userId) {
+    const effectiveUid = this.getAuthUid(userId);
+    if (!effectiveUid) {
+      return { error: 'Authentication required to delete question from Firestore.' };
+    }
     try {
       await deleteDoc(doc(db, 'questions', questionId));
       return { success: true };
     } catch (e) {
-      console.error('Firestore deleteQuestion error:', e);
-      return { error: e.message };
+      return { error: this.formatError(e, 'deleteQuestion') };
     }
   }
 
   // Real-time Subscriptions
   subscribeSubjects(userId, callback) {
-    if (!userId) return () => {};
-    const q = query(collection(db, 'subjects'), where('userId', '==', userId));
+    const effectiveUid = this.getAuthUid(userId);
+    if (!effectiveUid) return () => {};
+    const q = query(collection(db, 'subjects'), where('userId', '==', effectiveUid));
     return onSnapshot(q, (snap) => {
       const list = [];
       snap.forEach(d => list.push({ id: d.id, ...d.data() }));
       list.sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt));
       callback(list);
     }, (err) => {
-      console.warn('Firestore subjects subscription error:', err);
+      console.warn('Firestore subjects subscription warning:', err);
     });
   }
 
   subscribeQuestions(userId, callback) {
-    if (!userId) return () => {};
-    const q = query(collection(db, 'questions'), where('userId', '==', userId));
+    const effectiveUid = this.getAuthUid(userId);
+    if (!effectiveUid) return () => {};
+    const q = query(collection(db, 'questions'), where('userId', '==', effectiveUid));
     return onSnapshot(q, (snap) => {
       const list = [];
       snap.forEach(d => list.push({ id: d.id, ...d.data() }));
       list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
       callback(list);
     }, (err) => {
-      console.warn('Firestore questions subscription error:', err);
+      console.warn('Firestore questions subscription warning:', err);
     });
   }
 }

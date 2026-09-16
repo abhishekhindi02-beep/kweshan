@@ -36,8 +36,8 @@ export default function QuestionDetailPage() {
     );
   }
 
-  const handleDeleteConfirm = () => {
-    deleteQuestion(question.id);
+  const handleDeleteConfirm = async () => {
+    await deleteQuestion(question.id);
     setIsDeleteDialogOpen(false);
     if (subject) {
       navigate(`/subjects/${subject.id}`);

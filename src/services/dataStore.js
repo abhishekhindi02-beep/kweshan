@@ -317,37 +317,49 @@ class DataStore {
     return this.subjects.find(s => s && s.id === subjectId && (!userId || s.userId === userId)) || null;
   }
 
-  createSubject({ userId = this.currentUserId, name, description = '' }) {
+  async createSubject({ userId = this.currentUserId, name, description = '' }) {
     const cleanName = (name || '').trim();
     if (!cleanName) {
       return { error: 'Subject name is required.' };
     }
 
+    const effectiveUserId = userId || this.currentUserId;
+    if (!effectiveUserId) {
+      return { error: 'Authentication required to create a subject.' };
+    }
+
     // Check for duplicate subject name for the same user
     const existing = this.subjects.find(
-      s => s.userId === userId && s.name.toLowerCase() === cleanName.toLowerCase()
+      s => s.userId === effectiveUserId && s.name.toLowerCase() === cleanName.toLowerCase()
     );
     if (existing) {
       return { error: `A subject named "${cleanName}" already exists in your repository.` };
     }
 
+    const subjectId = `subj_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
     const newSubject = {
-      id: `subj_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
-      userId,
+      id: subjectId,
+      userId: effectiveUserId,
       name: cleanName,
       description: (description || '').trim(),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
 
-    this.subjects.unshift(newSubject);
+    const cloudRes = await firestoreService.createSubject(newSubject);
+    if (cloudRes && cloudRes.error) {
+      return { error: cloudRes.error };
+    }
+
+    const savedSubject = cloudRes?.subject || newSubject;
+    this.subjects = [savedSubject, ...this.subjects.filter(s => s.id !== savedSubject.id)];
     this.saveState();
-    firestoreService.createSubject(newSubject).catch(err => console.warn('Cloud createSubject background error:', err));
-    return { subject: newSubject };
+    return { success: true, subject: savedSubject };
   }
 
-  updateSubject(subjectId, { name, description }, userId = this.currentUserId) {
-    const idx = this.subjects.findIndex(s => s.id === subjectId && s.userId === userId);
+  async updateSubject(subjectId, { name, description }, userId = this.currentUserId) {
+    const effectiveUserId = userId || this.currentUserId;
+    const idx = this.subjects.findIndex(s => s.id === subjectId && s.userId === effectiveUserId);
     if (idx === -1) {
       return { error: 'Subject not found.' };
     }
@@ -359,41 +371,42 @@ class DataStore {
 
     // Check duplicate name on other subjects
     const duplicate = this.subjects.find(
-      s => s.id !== subjectId && s.userId === userId && s.name.toLowerCase() === cleanName.toLowerCase()
+      s => s.id !== subjectId && s.userId === effectiveUserId && s.name.toLowerCase() === cleanName.toLowerCase()
     );
     if (duplicate) {
       return { error: `Another subject named "${cleanName}" already exists.` };
     }
 
-    this.subjects[idx] = {
-      ...this.subjects[idx],
+    const updates = {
       name: cleanName,
       description: typeof description === 'string' ? description.trim() : this.subjects[idx].description,
       updatedAt: new Date().toISOString()
     };
 
-    this.saveState();
-    firestoreService.updateSubject(subjectId, {
-      name: cleanName,
-      description: typeof description === 'string' ? description.trim() : this.subjects[idx].description
-    }, userId).catch(err => console.warn('Cloud updateSubject error:', err));
+    const cloudRes = await firestoreService.updateSubject(subjectId, updates, effectiveUserId);
+    if (cloudRes && cloudRes.error) {
+      return { error: cloudRes.error };
+    }
 
-    return { subject: this.subjects[idx] };
+    this.subjects[idx] = {
+      ...this.subjects[idx],
+      ...updates
+    };
+    this.saveState();
+    return { success: true, subject: this.subjects[idx] };
   }
 
-  deleteSubject(subjectId, userId = this.currentUserId) {
-    const beforeCount = this.subjects.length;
-    this.subjects = this.subjects.filter(s => !(s.id === subjectId && s.userId === userId));
-    
-    // Also cascade delete all questions under this subject
-    this.questions = this.questions.filter(q => !(q.subjectId === subjectId && q.userId === userId));
-
-    if (this.subjects.length !== beforeCount) {
-      this.saveState();
-      firestoreService.deleteSubject(subjectId, userId).catch(err => console.warn('Cloud deleteSubject error:', err));
-      return { success: true };
+  async deleteSubject(subjectId, userId = this.currentUserId) {
+    const effectiveUserId = userId || this.currentUserId;
+    const cloudRes = await firestoreService.deleteSubject(subjectId, effectiveUserId);
+    if (cloudRes && cloudRes.error) {
+      return { error: cloudRes.error };
     }
-    return { error: 'Subject not found.' };
+
+    this.subjects = this.subjects.filter(s => !(s.id === subjectId && s.userId === effectiveUserId));
+    this.questions = this.questions.filter(q => !(q.subjectId === subjectId && q.userId === effectiveUserId));
+    this.saveState();
+    return { success: true };
   }
 
   // --- QUESTIONS MANAGEMENT ---
@@ -457,7 +470,7 @@ class DataStore {
     };
   }
 
-  createQuestion({
+  async createQuestion({
     userId = this.currentUserId,
     subjectId,
     questionText,
@@ -476,11 +489,15 @@ class DataStore {
       return { error: 'Please select a valid subject for this question.' };
     }
 
-    const cleanTopic = (topic || '').trim() || text.slice(0, 45);
+    const effectiveUserId = userId || this.currentUserId;
+    if (!effectiveUserId) {
+      return { error: 'Authentication required to save question.' };
+    }
 
+    const cleanTopic = (topic || '').trim() || text.slice(0, 45);
     const newQuestion = normalizeQuestion({
       id: `question_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
-      userId,
+      userId: effectiveUserId,
       subjectId,
       questionText: text,
       topic: cleanTopic,
@@ -496,10 +513,16 @@ class DataStore {
       updatedAt: new Date().toISOString()
     });
 
-    this.questions.unshift(newQuestion);
+    const cloudRes = await firestoreService.createQuestion(newQuestion);
+    if (cloudRes && cloudRes.error) {
+      return { error: cloudRes.error };
+    }
+
+    const savedQuestion = cloudRes?.question ? normalizeQuestion(cloudRes.question) : newQuestion;
+    this.questions = [savedQuestion, ...this.questions.filter(q => q.id !== savedQuestion.id)];
 
     // Update parent subject's updatedAt
-    const subjIdx = this.subjects.findIndex(s => s.id === subjectId && s.userId === userId);
+    const subjIdx = this.subjects.findIndex(s => s.id === subjectId && s.userId === effectiveUserId);
     if (subjIdx !== -1) {
       this.subjects[subjIdx] = {
         ...this.subjects[subjIdx],
@@ -508,12 +531,12 @@ class DataStore {
     }
 
     this.saveState();
-    firestoreService.createQuestion(newQuestion).catch(err => console.warn('Cloud createQuestion error:', err));
-    return { question: newQuestion };
+    return { success: true, question: savedQuestion };
   }
 
-  updateQuestion(questionId, updates, userId = this.currentUserId) {
-    const idx = this.questions.findIndex(q => q.id === questionId && q.userId === userId);
+  async updateQuestion(questionId, updates, userId = this.currentUserId) {
+    const effectiveUserId = userId || this.currentUserId;
+    const idx = this.questions.findIndex(q => q.id === questionId && q.userId === effectiveUserId);
     if (idx === -1) {
       return { error: 'Question not found.' };
     }
@@ -524,8 +547,7 @@ class DataStore {
       return { error: 'Question text cannot be empty.' };
     }
 
-    const updated = normalizeQuestion({
-      ...existing,
+    const updatedData = {
       ...updates,
       questionText: newText,
       topic: updates.topic !== undefined ? (updates.topic || '').trim() || newText.slice(0, 45) : existing.topic,
@@ -533,35 +555,22 @@ class DataStore {
       citation: updates.citation !== undefined ? (updates.citation || '').trim() : existing.citation,
       attachments: updates.attachments || existing.attachments,
       updatedAt: new Date().toISOString()
+    };
+
+    const cloudRes = await firestoreService.updateQuestion(questionId, updatedData, effectiveUserId);
+    if (cloudRes && cloudRes.error) {
+      return { error: cloudRes.error };
+    }
+
+    const updated = normalizeQuestion({
+      ...existing,
+      ...updatedData
     });
 
     this.questions[idx] = updated;
 
-    // Update parent subject's updatedAt
-    const subjIdx = this.subjects.findIndex(s => s.id === updated.subjectId && s.userId === userId);
-    if (subjIdx !== -1) {
-      this.subjects[subjIdx] = {
-        ...this.subjects[subjIdx],
-        updatedAt: new Date().toISOString()
-      };
-    }
-
-    this.saveState();
-    firestoreService.updateQuestion(questionId, updated, userId).catch(err => console.warn('Cloud updateQuestion error:', err));
-    return { question: updated };
-  }
-
-  deleteQuestion(questionId, userId = this.currentUserId) {
-    const target = this.questions.find(q => q.id === questionId && q.userId === userId);
-    if (!target) {
-      return { error: 'Question not found.' };
-    }
-
-    this.questions = this.questions.filter(q => !(q.id === questionId && q.userId === userId));
-
-    // Update parent subject's updatedAt
-    if (target.subjectId) {
-      const subjIdx = this.subjects.findIndex(s => s.id === target.subjectId && s.userId === userId);
+    if (updated.subjectId) {
+      const subjIdx = this.subjects.findIndex(s => s.id === updated.subjectId && s.userId === effectiveUserId);
       if (subjIdx !== -1) {
         this.subjects[subjIdx] = {
           ...this.subjects[subjIdx],
@@ -571,7 +580,34 @@ class DataStore {
     }
 
     this.saveState();
-    firestoreService.deleteQuestion(questionId, userId).catch(err => console.warn('Cloud deleteQuestion error:', err));
+    return { success: true, question: updated };
+  }
+
+  async deleteQuestion(questionId, userId = this.currentUserId) {
+    const effectiveUserId = userId || this.currentUserId;
+    const target = this.questions.find(q => q.id === questionId && q.userId === effectiveUserId);
+    if (!target) {
+      return { error: 'Question not found.' };
+    }
+
+    const cloudRes = await firestoreService.deleteQuestion(questionId, effectiveUserId);
+    if (cloudRes && cloudRes.error) {
+      return { error: cloudRes.error };
+    }
+
+    this.questions = this.questions.filter(q => !(q.id === questionId && q.userId === effectiveUserId));
+
+    if (target.subjectId) {
+      const subjIdx = this.subjects.findIndex(s => s.id === target.subjectId && s.userId === effectiveUserId);
+      if (subjIdx !== -1) {
+        this.subjects[subjIdx] = {
+          ...this.subjects[subjIdx],
+          updatedAt: new Date().toISOString()
+        };
+      }
+    }
+
+    this.saveState();
     return { success: true };
   }
 

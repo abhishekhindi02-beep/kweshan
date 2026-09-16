@@ -111,7 +111,7 @@ export default function QuestionEditorPage() {
     setEquations((prev) => prev.filter((_, i) => i !== idx));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const cleanText = questionText.trim();
     if (!cleanText) {
@@ -139,25 +139,30 @@ export default function QuestionEditorPage() {
       }
     };
 
-    let result;
-    if (isEdit) {
-      result = updateQuestion(questionId, payload);
-    } else {
-      result = createQuestion(payload);
-    }
+    try {
+      let result;
+      if (isEdit) {
+        result = await updateQuestion(questionId, payload);
+      } else {
+        result = await createQuestion(payload);
+      }
 
-    if (result && result.error) {
-      setError(result.error);
+      if (result && result.error) {
+        setError(result.error);
+        setIsSaving(false);
+        return;
+      }
+
       setIsSaving(false);
-      return;
-    }
-
-    setIsSaving(false);
-    // Navigate back to subject or question details
-    if (isEdit) {
-      navigate(`/subjects/${payload.subjectId}/questions/${result.question?.id || questionId}`);
-    } else {
-      navigate(`/subjects/${payload.subjectId}`);
+      // Navigate back to subject or question details
+      if (isEdit) {
+        navigate(`/subjects/${payload.subjectId}/questions/${result?.question?.id || questionId}`);
+      } else {
+        navigate(`/subjects/${payload.subjectId}`);
+      }
+    } catch (err) {
+      setError(err?.message || 'Failed to save question.');
+      setIsSaving(false);
     }
   };
 
