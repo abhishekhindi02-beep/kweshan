@@ -63,13 +63,23 @@ class DataStore {
           }
         }
 
-        this.users = loadedUsers;
+        // Keep real registered users only (filter out dummy mock 'user_1' if it has no password or old mock email)
+        this.users = loadedUsers.filter(u => u && u.id && u.id !== 'user_1');
 
         if (saved) {
           const parsed = JSON.parse(saved);
-          this.currentUserId = savedUser?.id || parsed.currentUserId || (this.users[0] ? this.users[0].id : null);
-          this.subjects = Array.isArray(parsed.subjects) ? parsed.subjects : JSON.parse(JSON.stringify(initialSubjects));
-          this.questions = Array.isArray(parsed.questions) ? parsed.questions.map(normalizeQuestion) : JSON.parse(JSON.stringify(initialRepoQuestions)).map(normalizeQuestion);
+          this.currentUserId = savedUser?.id || (this.users[0] ? this.users[0].id : null);
+
+          // Only keep subjects and questions belonging to real user IDs
+          const rawSubjects = Array.isArray(parsed.subjects) ? parsed.subjects : [];
+          this.subjects = rawSubjects.filter(s => s && s.userId && s.userId !== 'user_1');
+
+          const rawQuestions = Array.isArray(parsed.questions) ? parsed.questions : [];
+          this.questions = rawQuestions
+            .filter(q => q && q.userId && q.userId !== 'user_1')
+            .map(normalizeQuestion)
+            .filter(Boolean);
+
           return;
         }
       }
@@ -104,10 +114,10 @@ class DataStore {
   }
 
   resetToDefaults(save = true) {
-    this.users = JSON.parse(JSON.stringify(initialUsers));
-    this.currentUserId = this.users[0]?.id || null;
-    this.subjects = JSON.parse(JSON.stringify(initialSubjects));
-    this.questions = JSON.parse(JSON.stringify(initialRepoQuestions)).map(normalizeQuestion);
+    this.users = [];
+    this.currentUserId = null;
+    this.subjects = [];
+    this.questions = [];
     if (save) this.saveState();
   }
 
@@ -133,39 +143,6 @@ class DataStore {
       storageService.saveUser(user);
       storageService.setLoggedIn(true);
       this.saveState();
-    }
-  }
-
-  seedInitialRepositoryForUser(userId) {
-    if (!userId) return;
-    const existingUserSubjects = this.subjects.filter(s => s && s.userId === userId);
-    if (existingUserSubjects.length === 0) {
-      const subjectMap = {};
-      const newSubjects = initialSubjects.map(s => {
-        const newSubjId = `subj_${userId}_${s.id}`;
-        subjectMap[s.id] = newSubjId;
-        return {
-          ...s,
-          id: newSubjId,
-          userId: userId,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
-      });
-
-      const newQuestions = initialRepoQuestions.map(q => {
-        return normalizeQuestion({
-          ...q,
-          id: `q_${userId}_${q.id}`,
-          userId: userId,
-          subjectId: subjectMap[q.subjectId] || q.subjectId,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        });
-      });
-
-      this.subjects.push(...newSubjects);
-      this.questions.push(...newQuestions);
     }
   }
 
@@ -195,7 +172,7 @@ class DataStore {
     }
 
     const newUser = {
-      id: `user_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`,
+      id: `user_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       name: cleanName,
       username: cleanUsername,
       handle: `@${cleanUsername}`,
@@ -204,7 +181,7 @@ class DataStore {
       avatar: avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
       institution: 'Academic Scholar Guild',
       bio: 'Knowledge repository curator on Kweshun.',
-      selectedSubjects: ['Physics', 'Mathematics', 'Computer Science'],
+      selectedSubjects: [],
       isRegistered: true,
       onboardingCompleted: true,
       createdAt: new Date().toISOString()
@@ -212,7 +189,6 @@ class DataStore {
 
     this.users.unshift(newUser);
     this.currentUserId = newUser.id;
-    this.seedInitialRepositoryForUser(newUser.id);
     this.saveState();
     storageService.saveUser(newUser);
     storageService.setLoggedIn(true);
@@ -245,7 +221,6 @@ class DataStore {
     }
 
     this.currentUserId = user.id;
-    this.seedInitialRepositoryForUser(user.id);
     this.saveState();
     storageService.saveUser(user);
     storageService.setLoggedIn(true);
@@ -293,7 +268,7 @@ class DataStore {
     }
 
     const newSubject = {
-      id: `subj_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`,
+      id: `subj_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
       userId,
       name: cleanName,
       description: (description || '').trim(),
@@ -433,7 +408,7 @@ class DataStore {
     const cleanTopic = (topic || '').trim() || text.slice(0, 45);
 
     const newQuestion = normalizeQuestion({
-      id: `q_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`,
+      id: `question_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
       userId,
       subjectId,
       questionText: text,

@@ -45,7 +45,7 @@ export default function QuestionsPage() {
             My Questions
           </h1>
           <p className="text-xs sm:text-sm text-[#94a3b8] mt-1">
-            Browse, search, and organize all questions across your academic subjects
+            {questions.length} {questions.length === 1 ? 'question' : 'questions'}
           </p>
         </div>
 
@@ -173,9 +173,9 @@ export default function QuestionsPage() {
       ) : (
         <EmptyState
           icon={FileText}
-          title="No questions in your repository"
-          description="Create your first subject and add long-form questions to build your library."
-          actionLabel={subjects.length > 0 ? '+ Add Question' : '+ Create Subject'}
+          title="No questions yet."
+          description="Create your first question to start building your question repository."
+          actionLabel="+ Add Question"
           actionIcon={Plus}
           onAction={() => {
             if (subjects.length > 0) {
