@@ -8,7 +8,7 @@ import { useTheme } from '../context/ThemeContext';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { login, allUsers, switchUser } = useAuth();
+  const { login } = useAuth();
   const { showToast } = useToast();
   const { isDarkMode, toggleTheme } = useTheme();
 
@@ -17,8 +17,6 @@ export default function LoginPage() {
   const [errorMessage, setErrorMessage] = useState('');
   const [noProfileFound, setNoProfileFound] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const demoAccounts = (allUsers || []).slice(0, 5);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -41,16 +39,8 @@ export default function LoginPage() {
       navigate('/home');
     } else {
       setNoProfileFound(true);
-      setErrorMessage('No Kweshun profile found. Please sign up or choose a Demo Scholar below.');
+      setErrorMessage('No Kweshun profile found. Please check your credentials or create a free account.');
     }
-  };
-
-  const handleQuickDemoLogin = (user) => {
-    switchUser(user.id);
-    if (showToast) {
-      showToast(`Logged in as ${user.name}`, 'success');
-    }
-    navigate('/home');
   };
 
   return (
@@ -94,49 +84,6 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* Quick Demo Scholars Section */}
-        <div className="p-4 bg-[var(--bg-card)] border border-[var(--border-card)] rounded-2xl space-y-2.5">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-1.5">
-              <Users className="w-3.5 h-3.5 text-[#0df2c9]" />
-              Quick 1-Click Demo Scholars:
-            </span>
-            <span className="text-[10px] font-mono text-[#0df2c9] font-bold">5 Active Profiles</span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {demoAccounts.map((demoUser) => (
-              <button
-                key={demoUser.id}
-                type="button"
-                onClick={() => handleQuickDemoLogin(demoUser)}
-                className="p-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] hover:border-[#0df2c9]/60 hover:bg-[#0df2c9]/10 text-left transition-all flex items-center justify-between gap-2.5 cursor-pointer group"
-              >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <Avatar src={demoUser.avatar} name={demoUser.name} size="xs" />
-                  <div className="min-w-0">
-                    <div className="text-xs font-bold text-[var(--text-primary)] group-hover:text-[#0df2c9] truncate">
-                      {demoUser.name}
-                    </div>
-                    <div className="text-[10px] text-[var(--text-muted)] font-mono truncate">
-                      {demoUser.title || demoUser.tier || 'Scholar'}
-                    </div>
-                  </div>
-                </div>
-                <ArrowRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-[#0df2c9] flex-shrink-0" />
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Divider */}
-        <div className="relative flex items-center justify-center">
-          <div className="border-t border-[var(--border-subtle)] w-full" />
-          <span className="bg-[var(--bg-surface)] px-3 text-[11px] font-mono uppercase text-[var(--text-muted)]">
-            Or sign in with credentials
-          </span>
-        </div>
-
         {/* Error / No Profile Banner */}
         {errorMessage && (
           <div className="p-4 rounded-2xl bg-rose-500/15 border border-rose-500/40 text-rose-300 text-xs space-y-2.5 animate-fadeIn">
@@ -168,7 +115,7 @@ export default function LoginPage() {
                 type="text"
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
-                placeholder="e.g. elena_r or elena@kweshun.edu"
+                placeholder="e.g. abhishek or abhishek@kweshun.edu"
                 className="w-full bg-[var(--bg-input)] border border-[var(--border-subtle)] rounded-xl pl-10 pr-3.5 py-2.5 text-xs text-[var(--text-primary)] placeholder-slate-500 focus:outline-none focus:border-[#0df2c9] transition-colors"
               />
             </div>

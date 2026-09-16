@@ -23,8 +23,9 @@ import { useTheme } from '../../context/ThemeContext';
 export default function Sidebar({ isMobileOpen, onCloseMobile }) {
   const { currentUser, user, logout } = useAuth();
   const effectiveUser = currentUser || user || { 
-    name: 'Scholar', 
-    handle: '@scholar',
+    name: 'Abhishek Hindi', 
+    handle: '@abhishek',
+    username: 'abhishek',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100' 
   };
   const { subjects, questions } = useGame();

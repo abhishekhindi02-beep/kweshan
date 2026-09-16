@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   User, Mail, Building, FileText, Layers, Moon, Sun, 
-  LogOut, Check, Sparkles, Users, Edit3, Shield 
+  LogOut, Check, Sparkles, Edit3, Shield 
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useGame } from '../context/GameContext';
@@ -11,16 +11,17 @@ import Avatar from '../components/common/Avatar';
 
 export default function ProfilePage() {
   const navigate = useNavigate();
-  const { currentUser, user, allUsers, switchUser, updateUser, logout } = useAuth();
+  const { currentUser, user, updateUser, logout } = useAuth();
   const { subjects, questions, stats } = useGame();
   const { isDarkMode, toggleTheme } = useTheme();
 
   const effectiveUser = currentUser || user || {
     id: 'user_1',
-    name: 'Dr. Elena Rostova',
-    username: 'elena_r',
-    email: 'elena@kweshun.edu',
-    institution: 'MIT • Theoretical Physics',
+    name: 'Abhishek Hindi',
+    username: 'abhishek',
+    email: 'abhishek@kweshun.edu',
+    handle: '@abhishek',
+    institution: 'Academic Scholar Guild',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
   };
 
@@ -49,7 +50,7 @@ export default function ProfilePage() {
           Curator Profile & Settings
         </h1>
         <p className="text-xs sm:text-sm text-[#94a3b8] mt-1">
-          Manage your personal information, active academic persona, and repository preferences
+          Manage your personal information and repository preferences
         </p>
       </div>
 
@@ -182,46 +183,7 @@ export default function ProfilePage() {
             <Shield className="w-4 h-4" />
             <span>Local Vault Active</span>
           </div>
-          <p className="text-xs text-[#94a3b8] mt-0.5">Private localStorage sandbox</p>
-        </div>
-      </div>
-
-      {/* Demo Persona Switcher (Isolated Local Data) */}
-      <div className="bg-[#0f172a] border border-[#1e2d4d] rounded-2xl p-6 space-y-4">
-        <div>
-          <h3 className="text-base font-bold text-white flex items-center gap-2">
-            <Users className="w-4 h-4 text-[#0df2c9]" />
-            <span>Switch Scholar Profile</span>
-          </h3>
-          <p className="text-xs text-[#94a3b8] mt-0.5">
-            Test multi-user isolation by switching between local scholar profiles. Each scholar maintains an independent repository.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-          {(allUsers || []).map((u) => {
-            const isSelected = u.id === effectiveUser.id;
-            return (
-              <button
-                key={u.id}
-                onClick={() => switchUser(u.id)}
-                className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                  isSelected
-                    ? 'bg-[#0df2c9]/10 border-[#0df2c9]/50 shadow-sm'
-                    : 'bg-[#0f1626] border-[#1f2d47] hover:border-[#2b3d60]'
-                }`}
-              >
-                <Avatar src={u.avatar} alt={u.name} size="md" />
-                <div className="min-w-0 flex-1">
-                  <div className="text-xs font-bold text-white truncate flex items-center justify-between">
-                    <span>{u.name}</span>
-                    {isSelected && <Check className="w-3.5 h-3.5 text-[#0df2c9]" />}
-                  </div>
-                  <div className="text-[11px] text-[#94a3b8] truncate">{u.handle || `@${u.username || 'user'}`}</div>
-                </div>
-              </button>
-            );
-          })}
+          <p className="text-xs text-[#94a3b8] mt-0.5">Private localStorage repository</p>
         </div>
       </div>
 

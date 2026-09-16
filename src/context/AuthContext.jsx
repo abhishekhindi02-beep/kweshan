@@ -30,7 +30,6 @@ export function AuthProvider({ children }) {
     const unsubscribe = dataStore.subscribe(() => {
       const u = dataStore.getCurrentUser();
       setCurrentUser(u);
-      setAllUsers([...dataStore.users]);
       setIsAuthenticated(storageService.isLoggedIn());
     });
     return unsubscribe;
@@ -45,7 +44,7 @@ export function AuthProvider({ children }) {
       notifyToast(`Welcome back, ${res.user.name}!`, 'success', 'Welcome Back');
       return { success: true, user: res.user };
     }
-    const err = res.error || 'No Kweshun profile found. Please sign up first.';
+    const err = res.error || 'No Kweshun profile found. Please check your credentials or create an account.';
     notifyToast(err, 'error', 'Sign In Failed');
     return { success: false, error: err };
   };
@@ -83,15 +82,6 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const switchUser = (userId) => {
-    dataStore.setCurrentUser(userId);
-    const user = dataStore.getCurrentUser();
-    setCurrentUser(user);
-    setIsAuthenticated(true);
-    storageService.setLoggedIn(true);
-    notifyToast(`Now viewing as ${user.name}`, 'info', 'Profile Switched');
-  };
-
   const logout = () => {
     setIsAuthenticated(false);
     storageService.setLoggedIn(false);
@@ -106,12 +96,10 @@ export function AuthProvider({ children }) {
       currentUser,
       isAuthenticated,
       isRegistered,
-      allUsers,
       login,
       register,
       updateUser,
       updateUserSubjects,
-      switchUser,
       logout
     }}>
       {children}

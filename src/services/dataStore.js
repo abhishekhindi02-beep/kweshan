@@ -172,7 +172,7 @@ class DataStore {
       return { user };
     }
 
-    return { error: 'No Kweshun profile found. Please sign up or choose a Demo Scholar.' };
+    return { error: 'No Kweshun profile found. Please check your credentials or create an account.' };
   }
 
   updateUser(id, updates) {

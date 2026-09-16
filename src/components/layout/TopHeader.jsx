@@ -6,11 +6,13 @@ import { useAuth } from '../../context/AuthContext';
 import { useGame } from '../../context/GameContext';
 
 export default function TopHeader({ onOpenMobile }) {
-  const { currentUser, user, allUsers, switchUser, logout } = useAuth();
+  const { currentUser, user, logout } = useAuth();
   const effectiveUser = currentUser || user || { 
     id: 'user_1',
-    name: 'Dr. Elena Rostova', 
-    handle: '@elena_r',
+    name: 'Abhishek Hindi', 
+    handle: '@abhishek',
+    username: 'abhishek',
+    institution: 'Academic Scholar Guild',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100' 
   };
   const { subjects, globalSearch } = useGame();
@@ -185,39 +187,12 @@ export default function TopHeader({ onOpenMobile }) {
           </button>
 
           {isProfileMenuOpen && (
-            <div className="absolute right-0 top-full mt-2 w-64 bg-[#101726] border border-[#1f2d47] rounded-2xl shadow-2xl p-2 z-50 animate-fade-in">
+            <div className="absolute right-0 top-full mt-2 w-56 bg-[#101726] border border-[#1f2d47] rounded-2xl shadow-2xl p-2 z-50 animate-fade-in">
               {/* Active Profile Info */}
               <div className="px-3 py-2.5 border-b border-[#1c273e]">
                 <div className="text-xs font-bold text-white truncate">{effectiveUser.name}</div>
                 <div className="text-[11px] text-[#0df2c9] font-mono">{effectiveUser.handle || `@${effectiveUser.username || 'user'}`}</div>
-                <div className="text-[10px] text-[#64748b] truncate mt-0.5">{effectiveUser.institution || 'Academic Guild'}</div>
-              </div>
-
-              {/* Scholar Switcher */}
-              <div className="py-2 border-b border-[#1c273e]">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-[#64748b] px-3 mb-1.5">
-                  Switch Active Persona
-                </div>
-                <div className="space-y-0.5">
-                  {(allUsers || []).slice(0, 4).map((u) => {
-                    const isSelected = u.id === effectiveUser.id;
-                    return (
-                      <button
-                        key={u.id}
-                        onClick={() => {
-                          switchUser(u.id);
-                          setIsProfileMenuOpen(false);
-                        }}
-                        className={`w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs transition-colors cursor-pointer ${
-                          isSelected ? 'text-[#0df2c9] bg-[#0df2c9]/10 font-bold' : 'text-[#94a3b8] hover:text-white hover:bg-[#152037]'
-                        }`}
-                      >
-                        <span className="truncate">{u.name}</span>
-                        {isSelected && <Check className="w-3 h-3 shrink-0" />}
-                      </button>
-                    );
-                  })}
-                </div>
+                <div className="text-[10px] text-[#64748b] truncate mt-0.5">{effectiveUser.institution || 'Academic Scholar Guild'}</div>
               </div>
 
               {/* Links */}

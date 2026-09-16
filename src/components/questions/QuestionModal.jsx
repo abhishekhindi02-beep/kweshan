@@ -15,7 +15,7 @@ import { useToast } from '../../context/ToastContext';
 export default function QuestionModal({ isOpen, onClose, question = null }) {
   const { createQuestion, updateQuestion, decks } = useGame();
   const { user, currentUser } = useAuth();
-  const effectiveUser = currentUser || user || { id: 'user_1', name: 'Dr. Elena Rostova' };
+  const effectiveUser = currentUser || user || { id: 'user_1', name: 'Abhishek Hindi' };
   const { showToast, addToast } = useToast();
 
   const fileInputRef = useRef(null);
