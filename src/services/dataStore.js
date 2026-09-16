@@ -4,6 +4,7 @@ import {
   initialRepoQuestions
 } from './mockData.js';
 import storageService from './storageService.js';
+import firestoreService from './firestoreService.js';
 
 const STORAGE_KEY = 'kweshun_repo_store_v2';
 
@@ -22,9 +23,9 @@ export function normalizeQuestion(q) {
     : (Array.isArray(q.equations) ? q.equations : (q.equation ? [q.equation] : []));
 
   return {
-    id: q.id || `q_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
-    userId: q.userId || q.authorId || 'user_1',
-    subjectId: q.subjectId || 'subj_physics',
+    id: q.id || `question_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
+    userId: q.userId || q.authorId || '',
+    subjectId: q.subjectId || '',
     questionText: promptText,
     topic: q.topic || promptText.slice(0, 45) || 'Academic Concept',
     difficulty: q.difficulty ? (q.difficulty.charAt(0).toUpperCase() + q.difficulty.slice(1).toLowerCase()) : 'Medium',
@@ -43,6 +44,8 @@ export function normalizeQuestion(q) {
 class DataStore {
   constructor() {
     this.subscribers = new Set();
+    this.unsubFirestoreSubjects = null;
+    this.unsubFirestoreQuestions = null;
     this.loadState();
   }
 
@@ -143,6 +146,67 @@ class DataStore {
       storageService.saveUser(user);
       storageService.setLoggedIn(true);
       this.saveState();
+      this.initFirestoreListeners(userId);
+    }
+  }
+
+  initFirestoreListeners(userId) {
+    if (!userId) return;
+    // Clean up previous listeners
+    if (this.unsubFirestoreSubjects) this.unsubFirestoreSubjects();
+    if (this.unsubFirestoreQuestions) this.unsubFirestoreQuestions();
+
+    try {
+      this.unsubFirestoreSubjects = firestoreService.subscribeSubjects(userId, (cloudSubjects) => {
+        if (Array.isArray(cloudSubjects)) {
+          // Replace subjects for this user with cloud subjects
+          this.subjects = [
+            ...this.subjects.filter(s => s.userId !== userId),
+            ...cloudSubjects
+          ];
+          this.saveState();
+        }
+      });
+
+      this.unsubFirestoreQuestions = firestoreService.subscribeQuestions(userId, (cloudQuestions) => {
+        if (Array.isArray(cloudQuestions)) {
+          this.questions = [
+            ...this.questions.filter(q => q.userId !== userId),
+            ...cloudQuestions.map(normalizeQuestion)
+          ];
+          this.saveState();
+        }
+      });
+    } catch (e) {
+      console.warn('Firestore live listener error:', e);
+    }
+  }
+
+  async syncUserFromFirestore(userId) {
+    if (!userId) return;
+    try {
+      const [cloudSubjects, cloudQuestions] = await Promise.all([
+        firestoreService.getSubjects(userId),
+        firestoreService.getQuestions(userId)
+      ]);
+
+      if (Array.isArray(cloudSubjects)) {
+        this.subjects = [
+          ...this.subjects.filter(s => s.userId !== userId),
+          ...cloudSubjects
+        ];
+      }
+
+      if (Array.isArray(cloudQuestions)) {
+        this.questions = [
+          ...this.questions.filter(q => q.userId !== userId),
+          ...cloudQuestions.map(normalizeQuestion)
+        ];
+      }
+
+      this.saveState();
+    } catch (e) {
+      console.warn('Firestore manual sync error:', e);
     }
   }
 
@@ -278,6 +342,7 @@ class DataStore {
 
     this.subjects.unshift(newSubject);
     this.saveState();
+    firestoreService.createSubject(newSubject).catch(err => console.warn('Cloud createSubject background error:', err));
     return { subject: newSubject };
   }
 
@@ -308,6 +373,11 @@ class DataStore {
     };
 
     this.saveState();
+    firestoreService.updateSubject(subjectId, {
+      name: cleanName,
+      description: typeof description === 'string' ? description.trim() : this.subjects[idx].description
+    }, userId).catch(err => console.warn('Cloud updateSubject error:', err));
+
     return { subject: this.subjects[idx] };
   }
 
@@ -320,6 +390,7 @@ class DataStore {
 
     if (this.subjects.length !== beforeCount) {
       this.saveState();
+      firestoreService.deleteSubject(subjectId, userId).catch(err => console.warn('Cloud deleteSubject error:', err));
       return { success: true };
     }
     return { error: 'Subject not found.' };
@@ -437,6 +508,7 @@ class DataStore {
     }
 
     this.saveState();
+    firestoreService.createQuestion(newQuestion).catch(err => console.warn('Cloud createQuestion error:', err));
     return { question: newQuestion };
   }
 
@@ -475,6 +547,7 @@ class DataStore {
     }
 
     this.saveState();
+    firestoreService.updateQuestion(questionId, updated, userId).catch(err => console.warn('Cloud updateQuestion error:', err));
     return { question: updated };
   }
 
@@ -498,6 +571,7 @@ class DataStore {
     }
 
     this.saveState();
+    firestoreService.deleteQuestion(questionId, userId).catch(err => console.warn('Cloud deleteQuestion error:', err));
     return { success: true };
   }
 

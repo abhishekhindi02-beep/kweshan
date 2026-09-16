@@ -23,7 +23,7 @@ export default function RegisterPage() {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage('');
 
@@ -61,7 +61,7 @@ export default function RegisterPage() {
 
     const cleanUsername = username.trim().toLowerCase().replace(/\s+/g, '_').replace('@', '');
 
-    const res = register({
+    const res = await register({
       name: name.trim(),
       username: cleanUsername,
       email: email.trim().toLowerCase(),

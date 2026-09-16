@@ -18,7 +18,7 @@ export default function LoginPage() {
   const [noProfileFound, setNoProfileFound] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage('');
     setNoProfileFound(false);
@@ -29,7 +29,7 @@ export default function LoginPage() {
     }
 
     setIsSubmitting(true);
-    const res = login(identifier.trim(), password);
+    const res = await login(identifier.trim(), password);
     setIsSubmitting(false);
 
     if (res?.success) {
