@@ -38,8 +38,8 @@ export default function LoginPage() {
       }
       navigate('/home');
     } else {
-      setNoProfileFound(true);
-      setErrorMessage('No Kweshun profile found. Please check your credentials or create a free account.');
+      setNoProfileFound(Boolean(res?.notFound));
+      setErrorMessage(res?.error || 'No Kweshun profile found. Please check your credentials or create a free account.');
     }
   };
 

@@ -50,12 +50,24 @@ class DataStore {
     try {
       if (typeof localStorage !== 'undefined') {
         const saved = localStorage.getItem(STORAGE_KEY);
+        const savedUsers = storageService.getUsers();
         const savedUser = storageService.getUser();
+
+        let loadedUsers = [];
+        if (Array.isArray(savedUsers) && savedUsers.length > 0) {
+          loadedUsers = savedUsers;
+        } else if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed.users) && parsed.users.length > 0) {
+            loadedUsers = parsed.users;
+          }
+        }
+
+        this.users = loadedUsers;
 
         if (saved) {
           const parsed = JSON.parse(saved);
-          this.users = Array.isArray(parsed.users) && parsed.users.length > 0 ? parsed.users : JSON.parse(JSON.stringify(initialUsers));
-          this.currentUserId = savedUser?.id || parsed.currentUserId || 'user_1';
+          this.currentUserId = savedUser?.id || parsed.currentUserId || (this.users[0] ? this.users[0].id : null);
           this.subjects = Array.isArray(parsed.subjects) ? parsed.subjects : JSON.parse(JSON.stringify(initialSubjects));
           this.questions = Array.isArray(parsed.questions) ? parsed.questions.map(normalizeQuestion) : JSON.parse(JSON.stringify(initialRepoQuestions)).map(normalizeQuestion);
           return;
@@ -78,6 +90,7 @@ class DataStore {
           questions: this.questions
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        storageService.saveUsers(this.users);
 
         const currentUser = this.getCurrentUser();
         if (currentUser) {
@@ -92,7 +105,7 @@ class DataStore {
 
   resetToDefaults(save = true) {
     this.users = JSON.parse(JSON.stringify(initialUsers));
-    this.currentUserId = 'user_1';
+    this.currentUserId = this.users[0]?.id || null;
     this.subjects = JSON.parse(JSON.stringify(initialSubjects));
     this.questions = JSON.parse(JSON.stringify(initialRepoQuestions)).map(normalizeQuestion);
     if (save) this.saveState();
@@ -109,38 +122,89 @@ class DataStore {
 
   // --- Current User & Authentication ---
   getCurrentUser() {
-    return this.users.find(u => u.id === this.currentUserId) || this.users[0];
+    if (!this.currentUserId) return this.users[0] || null;
+    return this.users.find(u => u.id === this.currentUserId) || this.users[0] || null;
   }
 
   setCurrentUser(userId) {
-    if (this.users.some(u => u.id === userId)) {
+    const user = this.users.find(u => u.id === userId);
+    if (user) {
       this.currentUserId = userId;
-      const user = this.getCurrentUser();
       storageService.saveUser(user);
       storageService.setLoggedIn(true);
       this.saveState();
     }
   }
 
+  seedInitialRepositoryForUser(userId) {
+    if (!userId) return;
+    const existingUserSubjects = this.subjects.filter(s => s && s.userId === userId);
+    if (existingUserSubjects.length === 0) {
+      const subjectMap = {};
+      const newSubjects = initialSubjects.map(s => {
+        const newSubjId = `subj_${userId}_${s.id}`;
+        subjectMap[s.id] = newSubjId;
+        return {
+          ...s,
+          id: newSubjId,
+          userId: userId,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+      });
+
+      const newQuestions = initialRepoQuestions.map(q => {
+        return normalizeQuestion({
+          ...q,
+          id: `q_${userId}_${q.id}`,
+          userId: userId,
+          subjectId: subjectMap[q.subjectId] || q.subjectId,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
+      });
+
+      this.subjects.push(...newSubjects);
+      this.questions.push(...newQuestions);
+    }
+  }
+
   registerUser({ name, username, email, password, avatar }) {
-    const cleanUsername = username ? username.toLowerCase().replace(/\s+/g, '_').replace('@', '') : name.toLowerCase().replace(/\s+/g, '_');
-    const cleanEmail = email ? email.toLowerCase().trim() : `${cleanUsername}@kweshun.edu`;
-    
+    const cleanName = (name || '').trim();
+    const cleanUsername = (username || '').trim().toLowerCase().replace(/\s+/g, '_').replace(/^@+/, '') || cleanName.toLowerCase().replace(/\s+/g, '_');
+    const cleanEmail = (email || '').trim().toLowerCase();
+
+    if (!cleanName) {
+      return { error: 'Please provide your full name.' };
+    }
+    if (!cleanUsername) {
+      return { error: 'Please choose an academic username.' };
+    }
+    if (!cleanEmail) {
+      return { error: 'Please provide a valid email address.' };
+    }
+
     // Check if user already exists
-    if (this.users.some(u => u.email?.toLowerCase() === cleanEmail || u.username?.toLowerCase() === cleanUsername)) {
+    const existing = this.users.find(u => 
+      (u.email && u.email.trim().toLowerCase() === cleanEmail) || 
+      (u.username && u.username.trim().toLowerCase().replace(/^@+/, '') === cleanUsername)
+    );
+
+    if (existing) {
       return { error: 'An account with this email or username already exists.' };
     }
 
     const newUser = {
-      id: `user_${Date.now()}`,
-      name: name.trim(),
+      id: `user_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`,
+      name: cleanName,
       username: cleanUsername,
       handle: `@${cleanUsername}`,
       email: cleanEmail,
-      password: password || 'pass123',
+      password: password || '',
       avatar: avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
       institution: 'Academic Scholar Guild',
       bio: 'Knowledge repository curator on Kweshun.',
+      selectedSubjects: ['Physics', 'Mathematics', 'Computer Science'],
       isRegistered: true,
       onboardingCompleted: true,
       createdAt: new Date().toISOString()
@@ -148,31 +212,49 @@ class DataStore {
 
     this.users.unshift(newUser);
     this.currentUserId = newUser.id;
+    this.seedInitialRepositoryForUser(newUser.id);
+    this.saveState();
     storageService.saveUser(newUser);
     storageService.setLoggedIn(true);
-    this.saveState();
-    return { user: newUser };
+    return { success: true, user: newUser };
   }
 
   loginUser(identifier, password) {
-    const clean = (identifier || '').toLowerCase().trim();
-    const cleanNoAt = clean.replace('@', '');
-    const user = this.users.find(u => 
-      (u.email && u.email.toLowerCase() === clean) || 
-      (u.username && u.username.toLowerCase() === cleanNoAt) ||
-      (u.handle && u.handle.toLowerCase() === clean) ||
-      (u.name && u.name.toLowerCase() === clean)
-    );
+    const clean = (identifier || '').trim().toLowerCase();
+    const cleanNoAt = clean.replace(/^@+/, '');
 
-    if (user) {
-      this.currentUserId = user.id;
-      storageService.saveUser(user);
-      storageService.setLoggedIn(true);
-      this.saveState();
-      return { user };
+    if (!clean) {
+      return { error: 'Please enter your email or username.' };
     }
 
-    return { error: 'No Kweshun profile found. Please check your credentials or create an account.' };
+    const user = this.users.find(u => 
+      (u.email && u.email.trim().toLowerCase() === clean) || 
+      (u.username && u.username.trim().toLowerCase().replace(/^@+/, '') === cleanNoAt) ||
+      (u.handle && u.handle.trim().toLowerCase().replace(/^@+/, '') === cleanNoAt)
+    );
+
+    if (!user) {
+      return { 
+        error: 'No Kweshun profile found. Please check your credentials or create a free account.',
+        notFound: true 
+      };
+    }
+
+    if (user.password && password && user.password !== password) {
+      return { error: 'Invalid password. Please check your credentials.' };
+    }
+
+    this.currentUserId = user.id;
+    this.seedInitialRepositoryForUser(user.id);
+    this.saveState();
+    storageService.saveUser(user);
+    storageService.setLoggedIn(true);
+    return { success: true, user };
+  }
+
+  logoutUser() {
+    storageService.setLoggedIn(false);
+    this.notify();
   }
 
   updateUser(id, updates) {

@@ -1,19 +1,4 @@
-export const initialUsers = [
-  {
-    id: 'user_1',
-    name: 'Abhishek Hindi',
-    username: 'abhishek',
-    email: 'abhishek@kweshun.edu',
-    handle: '@abhishek',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-    institution: 'Academic Scholar Guild',
-    bio: 'Curator of academic questions, theoretical formulations, and mathematical derivations.',
-    selectedSubjects: ['Physics', 'Mathematics', 'Computer Science'],
-    isRegistered: true,
-    onboardingCompleted: true,
-    createdAt: new Date(Date.now() - 90 * 86400000).toISOString()
-  }
-];
+export const initialUsers = [];
 
 export const initialDecks = [
   {

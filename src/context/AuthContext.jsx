@@ -46,7 +46,7 @@ export function AuthProvider({ children }) {
     }
     const err = res.error || 'No Kweshun profile found. Please check your credentials or create an account.';
     notifyToast(err, 'error', 'Sign In Failed');
-    return { success: false, error: err };
+    return { success: false, error: err, notFound: res.notFound };
   };
 
   const register = (data) => {
@@ -83,12 +83,13 @@ export function AuthProvider({ children }) {
   };
 
   const logout = () => {
+    dataStore.logoutUser();
     setIsAuthenticated(false);
     storageService.setLoggedIn(false);
     notifyToast('You have been signed out.', 'info', 'Signed Out');
   };
 
-  const isRegistered = Boolean(storageService.isRegistered());
+  const isRegistered = Boolean(storageService.isRegistered() || (currentUser && currentUser.isRegistered));
 
   return (
     <AuthContext.Provider value={{

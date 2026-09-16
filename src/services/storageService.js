@@ -4,7 +4,9 @@
  */
 
 export const STORAGE_KEYS = {
+  USERS: 'kweshun_users',
   USER: 'kweshun_user',
+  CURRENT_USER: 'kweshun_current_user',
   AUTH_SESSION: 'kweshun_auth_logged_in',
   QUESTIONS: 'kweshun_questions',
   DECKS: 'kweshun_decks',
@@ -55,18 +57,35 @@ class StorageService {
   }
 
   // --- Specialized Domain Getters & Setters ---
+  getUsers() {
+    return this.getItem(STORAGE_KEYS.USERS, []);
+  }
+
+  saveUsers(users) {
+    this.setItem(STORAGE_KEYS.USERS, Array.isArray(users) ? users : []);
+  }
+
   getUser() {
-    return this.getItem(STORAGE_KEYS.USER, null);
+    return this.getItem(STORAGE_KEYS.CURRENT_USER, null) || this.getItem(STORAGE_KEYS.USER, null);
+  }
+
+  getCurrentUser() {
+    return this.getUser();
   }
 
   saveUser(user) {
     this.setItem(STORAGE_KEYS.USER, user);
+    this.setItem(STORAGE_KEYS.CURRENT_USER, user);
     if (user && typeof user.dp === 'number') {
       this.saveDP(user.dp);
     }
     if (user && typeof user.streak === 'number') {
       this.saveStreak(user.streak);
     }
+  }
+
+  saveCurrentUser(user) {
+    this.saveUser(user);
   }
 
   isRegistered() {
@@ -80,7 +99,7 @@ class StorageService {
       const session = localStorage.getItem(STORAGE_KEYS.AUTH_SESSION);
       const user = this.getUser();
       if (!user || !user.isRegistered) return false;
-      return session !== 'false';
+      return session === 'true';
     } catch (e) {
       return false;
     }
