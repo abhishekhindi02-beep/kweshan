@@ -1,333 +1,253 @@
 import React, { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { 
-  User, Award, Flame, Trophy, TrendingUp, Sparkles, 
-  BookOpen, ShieldCheck, Edit3, Check, Calendar, School, Zap, Swords, UserPlus, FileText 
+  User, Mail, Building, FileText, Layers, Moon, Sun, 
+  LogOut, Check, Sparkles, Users, Edit3, Shield 
 } from 'lucide-react';
-import Badge from '../components/common/Badge';
-import ProgressBar from '../components/common/ProgressBar';
-import Avatar from '../components/common/Avatar';
-import ChallengeModal from '../components/battles/ChallengeModal';
-import QuestionDetailModal from '../components/questions/QuestionDetailModal';
 import { useAuth } from '../context/AuthContext';
 import { useGame } from '../context/GameContext';
-import { useToast } from '../context/ToastContext';
+import { useTheme } from '../context/ThemeContext';
+import Avatar from '../components/common/Avatar';
 
 export default function ProfilePage() {
-  const { id } = useParams();
   const navigate = useNavigate();
-  const { user, currentUser, allUsers, updateUser } = useAuth();
-  const effectiveCurrentUser = currentUser || user;
-  const { questions, battles, sendFriendRequest } = useGame();
-  const { showToast } = useToast();
+  const { currentUser, user, allUsers, switchUser, updateUser, logout } = useAuth();
+  const { subjects, questions, stats } = useGame();
+  const { isDarkMode, toggleTheme } = useTheme();
 
-  // Determine if viewing own profile or another player's profile
-  const isSelf = !id || id === effectiveCurrentUser?.id;
-  const profileUser = isSelf
-    ? effectiveCurrentUser
-    : (allUsers?.find(u => u.id === id) || {
-        id,
-        name: 'Scholar Peer',
-        handle: '@scholar',
-        institution: 'Academic Guild',
-        bio: 'Competitive duel scholar and problem solver.',
-        dp: 0,
-        streak: 0,
-        level: 1,
-        rank: 'Scholar Tier',
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-        wins: 0,
-        losses: 0,
-        totalBattles: 0
-      });
+  const effectiveUser = currentUser || user || {
+    id: 'user_1',
+    name: 'Dr. Elena Rostova',
+    username: 'elena_r',
+    email: 'elena@kweshun.edu',
+    institution: 'MIT • Theoretical Physics',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
+  };
 
   const [isEditing, setIsEditing] = useState(false);
-  const [name, setName] = useState(profileUser?.name || 'Dr. Elena Rostova');
-  const [handle, setHandle] = useState(profileUser?.handle || (profileUser?.username ? `@${profileUser.username}` : '@scholar'));
-  const [institution, setInstitution] = useState(profileUser?.institution || 'MIT • Dept of Theoretical Physics');
-  const [bio, setBio] = useState(profileUser?.bio || 'Theoretical mechanics buff & differential equations specialist.');
-  const [isChallengeOpen, setIsChallengeOpen] = useState(false);
-  const [viewingDetailQuestion, setViewingDetailQuestion] = useState(null);
-
-  const authoredQuestions = questions.filter(q => q.authorId === profileUser?.id);
-  const avgQuality = authoredQuestions.length > 0
-    ? Math.round(authoredQuestions.reduce((acc, q) => acc + (q.qualityScores?.composite || q.qualityScore || 85), 0) / authoredQuestions.length)
-    : (profileUser?.dp > 0 ? 92 : 0);
+  const [name, setName] = useState(effectiveUser.name || '');
+  const [institution, setInstitution] = useState(effectiveUser.institution || '');
+  const [bio, setBio] = useState(effectiveUser.bio || '');
 
   const handleSaveProfile = (e) => {
     e.preventDefault();
-    updateUser({ name, handle, institution, bio });
+    if (updateUser) {
+      updateUser({
+        name: name.trim(),
+        institution: institution.trim(),
+        bio: bio.trim()
+      });
+    }
     setIsEditing(false);
-    if (showToast) showToast('Scholar profile updated successfully!', 'success');
   };
-
-  const handleSendFriend = () => {
-    sendFriendRequest(profileUser.username || profileUser.name);
-  };
-
-  const winRateFormatted = profileUser?.totalBattles > 0
-    ? `${Math.round(((profileUser.wins || 0) / profileUser.totalBattles) * 100)}%`
-    : '0%';
-
-  const badges = [
-    { name: 'Grandmaster Author', desc: 'Authored questions with 90+ quality score', icon: Sparkles, color: 'text-[#0df2c9]', bg: 'bg-[#0df2c9]/10' },
-    { name: 'Lightning Master', desc: 'Participated in Daily Lightning Arena', icon: Zap, color: 'text-amber-400', bg: 'bg-amber-400/10' },
-    { name: 'Scholar Flame', desc: 'Maintained active daily study streak', icon: Flame, color: 'text-rose-400', bg: 'bg-rose-400/10' },
-    { name: 'Distinction Pioneer', desc: 'Ranked in Distinction Leaderboard', icon: Trophy, color: 'text-purple-400', bg: 'bg-purple-400/10' },
-  ];
 
   return (
-    <div className="space-y-8 max-w-5xl mx-auto animate-fadeIn">
-      {/* Profile Header Banner */}
-      <div className="bg-[#111927] border border-[#22334d] rounded-3xl p-6 sm:p-8 relative overflow-hidden shadow-xl">
-        <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-br from-[#0df2c9]/10 to-transparent rounded-full blur-3xl pointer-events-none" />
+    <div className="space-y-8 pb-16 animate-fade-in max-w-4xl mx-auto">
+      {/* Page Title */}
+      <div>
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+          Curator Profile & Settings
+        </h1>
+        <p className="text-xs sm:text-sm text-[#94a3b8] mt-1">
+          Manage your personal information, active academic persona, and repository preferences
+        </p>
+      </div>
 
-        <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
-            <div className="relative">
-              <Avatar
-                src={profileUser?.avatar}
-                name={profileUser?.name}
-                size="xl"
-                className="border-2 border-[#0df2c9] shadow-lg shadow-[#0df2c9]/20"
-              />
-              <div className="absolute -bottom-2 -right-2 bg-amber-400 text-slate-950 font-black text-xs px-2 py-0.5 rounded-full flex items-center gap-0.5">
-                <Flame className="w-3.5 h-3.5 fill-slate-950" />
-                {profileUser?.streak ?? 0}d
+      {/* User Header Profile Card */}
+      <div className="bg-[#0f172a] border border-[#1e2d4d] rounded-3xl p-6 sm:p-8 shadow-xl">
+        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
+          <Avatar
+            src={effectiveUser.avatar}
+            alt={effectiveUser.name}
+            size="xl"
+            className="ring-4 ring-[#0df2c9]/30 shadow-xl"
+          />
+
+          <div className="flex-1 text-center sm:text-left space-y-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+                  {effectiveUser.name}
+                </h2>
+                <span className="text-xs sm:text-sm text-[#0df2c9] font-mono font-medium">
+                  {effectiveUser.handle || `@${effectiveUser.username || 'scholar'}`}
+                </span>
               </div>
-            </div>
 
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl sm:text-2xl font-black text-white">{profileUser?.name}</h1>
-                <Badge variant="mint">{profileUser?.rank || profileUser?.tier || 'Scholar Tier'}</Badge>
-              </div>
-              <p className="text-xs sm:text-sm font-mono text-[#0df2c9]">
-                {profileUser?.handle || (profileUser?.username ? `@${profileUser.username}` : '@scholar')}
-              </p>
-              <p className="text-xs text-slate-300 flex items-center gap-1.5 pt-1">
-                <School className="w-3.5 h-3.5 text-slate-400" />
-                {profileUser?.institution || 'Academic Scholar Guild'}
-              </p>
-              <p className="text-xs text-slate-400 pt-0.5 max-w-md">
-                "{profileUser?.bio || 'Competitive scholar on Kweshun.'}"
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {isSelf ? (
               <button
                 onClick={() => setIsEditing(!isEditing)}
-                className="px-4 py-2 bg-[#1b273a] hover:bg-[#25354e] text-slate-200 text-xs font-bold rounded-xl border border-[#2e4363] hover:border-[#0df2c9]/50 transition-all flex items-center gap-1.5 cursor-pointer"
+                className="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#152037] hover:bg-[#1d2c4b] text-[#cbd5e1] hover:text-white text-xs font-semibold border border-[#223252] transition-colors cursor-pointer self-center sm:self-start"
               >
                 <Edit3 className="w-3.5 h-3.5" />
-                {isEditing ? 'Cancel Edit' : 'Edit Profile'}
+                <span>{isEditing ? 'Cancel Edit' : 'Edit Details'}</span>
               </button>
-            ) : (
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setIsChallengeOpen(true)}
-                  className="px-4 py-2 bg-[#0df2c9] hover:bg-[#00e1ba] text-slate-950 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
-                >
-                  <Swords className="w-3.5 h-3.5" />
-                  Challenge
-                </button>
-                <button
-                  onClick={handleSendFriend}
-                  className="px-3.5 py-2 bg-[#1b273a] hover:bg-[#25354e] text-slate-200 text-xs font-bold rounded-xl border border-[#2e4363] transition-all flex items-center gap-1.5 cursor-pointer"
-                >
-                  <UserPlus className="w-3.5 h-3.5 text-[#0df2c9]" />
-                  Add Friend
-                </button>
-              </div>
+            </div>
+
+            <p className="text-xs sm:text-sm text-[#94a3b8] flex items-center justify-center sm:justify-start gap-1.5">
+              <Building className="w-3.5 h-3.5 text-[#64748b]" />
+              <span>{effectiveUser.institution || 'Academic Scholar Guild'}</span>
+            </p>
+
+            <p className="text-xs sm:text-sm text-[#94a3b8] flex items-center justify-center sm:justify-start gap-1.5">
+              <Mail className="w-3.5 h-3.5 text-[#64748b]" />
+              <span>{effectiveUser.email || `${effectiveUser.username || 'scholar'}@kweshun.edu`}</span>
+            </p>
+
+            {effectiveUser.bio && (
+              <p className="text-xs sm:text-sm text-[#cbd5e1] pt-2 border-t border-[#1a253c] leading-relaxed">
+                {effectiveUser.bio}
+              </p>
             )}
           </div>
         </div>
 
-        {/* Inline Profile Edit Form */}
-        {isEditing && isSelf && (
-          <form onSubmit={handleSaveProfile} className="mt-6 pt-6 border-t border-[#1b273a] grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">
-                Full Name
-              </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full bg-[#0b101b] border border-[#22334d] rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-[#0df2c9]"
-              />
+        {/* Inline Edit Form */}
+        {isEditing && (
+          <form onSubmit={handleSaveProfile} className="mt-6 pt-6 border-t border-[#1c273e] space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#94a3b8] mb-1.5">
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full px-4 py-2 bg-[#0a0f1d] border border-[#1f2d47] focus:border-[#0df2c9] rounded-xl text-sm text-white focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#94a3b8] mb-1.5">
+                  Institution / Guild
+                </label>
+                <input
+                  type="text"
+                  value={institution}
+                  onChange={(e) => setInstitution(e.target.value)}
+                  className="w-full px-4 py-2 bg-[#0a0f1d] border border-[#1f2d47] focus:border-[#0df2c9] rounded-xl text-sm text-white focus:outline-none"
+                />
+              </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">
-                Scholar Handle
-              </label>
-              <input
-                type="text"
-                value={handle}
-                onChange={(e) => setHandle(e.target.value)}
-                className="w-full bg-[#0b101b] border border-[#22334d] rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-[#0df2c9]"
-              />
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">
-                Academic Institution / Department
-              </label>
-              <input
-                type="text"
-                value={institution}
-                onChange={(e) => setInstitution(e.target.value)}
-                className="w-full bg-[#0b101b] border border-[#22334d] rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-[#0df2c9]"
-              />
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">
-                Academic Bio
+              <label className="block text-xs font-bold uppercase tracking-wider text-[#94a3b8] mb-1.5">
+                Bio / Specialization
               </label>
               <textarea
                 rows={2}
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
-                className="w-full bg-[#0b101b] border border-[#22334d] rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-[#0df2c9]"
+                className="w-full px-4 py-2 bg-[#0a0f1d] border border-[#1f2d47] focus:border-[#0df2c9] rounded-xl text-sm text-white focus:outline-none resize-none"
               />
             </div>
 
-            <div className="sm:col-span-2 flex justify-end">
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setIsEditing(false)}
+                className="px-4 py-1.5 rounded-xl bg-[#152037] text-xs font-semibold text-[#94a3b8]"
+              >
+                Cancel
+              </button>
               <button
                 type="submit"
-                className="px-5 py-2 bg-[#0df2c9] hover:bg-[#00e1ba] text-slate-950 font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-sm cursor-pointer"
+                className="px-5 py-1.5 rounded-xl bg-[#0df2c9] text-slate-950 text-xs font-bold shadow-md shadow-[#0df2c9]/20"
               >
-                <Check className="w-3.5 h-3.5" />
-                Save Changes
+                Save Details
               </button>
             </div>
           </form>
         )}
       </div>
 
-      {/* Career Stats Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="bg-[#111927] border border-[#22334d] p-4 rounded-2xl text-center">
-          <div className="text-slate-400 text-xs font-medium">Distinction Points</div>
-          <div className="text-2xl font-black font-mono text-[#0df2c9] mt-1">
-            {(profileUser?.dp || 0).toLocaleString()}
-          </div>
-          <div className="text-[10px] text-slate-500 font-mono">
-            {profileUser?.tier || 'Scholar Tier'}
-          </div>
+      {/* User's Isolated Repository Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="bg-[#0f1626] border border-[#1b273f] rounded-2xl p-5 text-center sm:text-left">
+          <span className="text-xs font-bold uppercase tracking-wider text-[#64748b]">Total Subjects</span>
+          <div className="text-2xl font-black text-white mt-1">{subjects.length}</div>
+          <p className="text-xs text-[#94a3b8] mt-0.5">Categorized subject domains</p>
         </div>
 
-        <div className="bg-[#111927] border border-[#22334d] p-4 rounded-2xl text-center">
-          <div className="text-slate-400 text-xs font-medium">Win Rate</div>
-          <div className="text-2xl font-black font-mono text-white mt-1">
-            {winRateFormatted}
-          </div>
-          <div className="text-[10px] text-emerald-400 font-medium font-mono">
-            {profileUser?.wins || 0}W / {profileUser?.losses || 0}L
-          </div>
+        <div className="bg-[#0f1626] border border-[#1b273f] rounded-2xl p-5 text-center sm:text-left">
+          <span className="text-xs font-bold uppercase tracking-wider text-[#64748b]">Authored Questions</span>
+          <div className="text-2xl font-black text-white mt-1">{questions.length}</div>
+          <p className="text-xs text-[#94a3b8] mt-0.5">Stored long-form questions</p>
         </div>
 
-        <div className="bg-[#111927] border border-[#22334d] p-4 rounded-2xl text-center">
-          <div className="text-slate-400 text-xs font-medium">Questions Authored</div>
-          <div className="text-2xl font-black font-mono text-white mt-1">{authoredQuestions.length}</div>
-          <div className="text-[10px] text-purple-400 font-medium">Long-Form Items</div>
-        </div>
-
-        <div className="bg-[#111927] border border-[#22334d] p-4 rounded-2xl text-center">
-          <div className="text-slate-400 text-xs font-medium">Avg Quality Rating</div>
-          <div className="text-2xl font-black font-mono text-amber-400 mt-1">{avgQuality}/100</div>
-          <div className="text-[10px] text-slate-500 font-mono">
-            {avgQuality >= 90 ? 'Grade A+' : avgQuality >= 80 ? 'Grade A' : 'Grade B'}
+        <div className="bg-[#0f1626] border border-[#1b273f] rounded-2xl p-5 text-center sm:text-left">
+          <span className="text-xs font-bold uppercase tracking-wider text-[#64748b]">Account Status</span>
+          <div className="text-lg font-bold text-[#0df2c9] mt-1.5 flex items-center justify-center sm:justify-start gap-1">
+            <Shield className="w-4 h-4" />
+            <span>Local Vault Active</span>
           </div>
+          <p className="text-xs text-[#94a3b8] mt-0.5">Private localStorage sandbox</p>
         </div>
       </div>
 
-      {/* Authored Questions Repository by this user */}
-      <div className="bg-[#111927] border border-[#22334d] rounded-3xl p-6 space-y-4">
-        <div className="flex items-center justify-between">
+      {/* Demo Persona Switcher (Isolated Local Data) */}
+      <div className="bg-[#0f172a] border border-[#1e2d4d] rounded-2xl p-6 space-y-4">
+        <div>
           <h3 className="text-base font-bold text-white flex items-center gap-2">
-            <FileText className="w-5 h-5 text-[#0df2c9]" />
-            Authored Academic Questions ({authoredQuestions.length})
+            <Users className="w-4 h-4 text-[#0df2c9]" />
+            <span>Switch Scholar Profile</span>
           </h3>
-          {isSelf && (
-            <button
-              onClick={() => navigate('/questions/new')}
-              className="text-xs font-bold text-[#0df2c9] hover:underline cursor-pointer"
-            >
-              + Author New Question
-            </button>
-          )}
+          <p className="text-xs text-[#94a3b8] mt-0.5">
+            Test multi-user isolation by switching between local scholar profiles. Each scholar maintains an independent repository.
+          </p>
         </div>
 
-        {authoredQuestions.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {authoredQuestions.map((q) => (
-              <div
-                key={q.id}
-                onClick={() => setViewingDetailQuestion(q)}
-                className="p-4 bg-[#0b101b] border border-[#22334d] hover:border-[#0df2c9]/40 rounded-2xl cursor-pointer transition-all space-y-2 group"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-mono text-[#8b5cf6] font-bold uppercase truncate">
-                    {q.topic || q.deckName}
-                  </span>
-                  <Badge variant={q.status === 'Live' ? 'live' : 'pending'} size="xs">
-                    {q.status || 'Live'}
-                  </Badge>
-                </div>
-                <p className="text-xs text-white line-clamp-2 group-hover:text-[#0df2c9] transition-colors leading-relaxed">
-                  {q.prompt || q.text}
-                </p>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="p-8 text-center text-xs text-slate-500 bg-[#0b101b] rounded-2xl border border-[#1b273a]">
-            No questions created yet by this scholar.
-          </div>
-        )}
-      </div>
-
-      {/* Academic Honors & Badges */}
-      <div className="bg-[#111927] border border-[#22334d] rounded-3xl p-6 space-y-4">
-        <h3 className="text-base font-bold text-white flex items-center gap-2">
-          <Trophy className="w-5 h-5 text-amber-400" />
-          Academic Honors & Distinction Badges
-        </h3>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {badges.map((b, i) => {
-            const Icon = b.icon;
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+          {(allUsers || []).map((u) => {
+            const isSelected = u.id === effectiveUser.id;
             return (
-              <div key={i} className="bg-[#0b101b] border border-[#22334d] p-4 rounded-2xl flex items-center gap-3.5">
-                <div className={`p-3 rounded-2xl ${b.bg} ${b.color} flex-shrink-0`}>
-                  <Icon className="w-6 h-6" />
+              <button
+                key={u.id}
+                onClick={() => switchUser(u.id)}
+                className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                  isSelected
+                    ? 'bg-[#0df2c9]/10 border-[#0df2c9]/50 shadow-sm'
+                    : 'bg-[#0f1626] border-[#1f2d47] hover:border-[#2b3d60]'
+                }`}
+              >
+                <Avatar src={u.avatar} alt={u.name} size="md" />
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs font-bold text-white truncate flex items-center justify-between">
+                    <span>{u.name}</span>
+                    {isSelected && <Check className="w-3.5 h-3.5 text-[#0df2c9]" />}
+                  </div>
+                  <div className="text-[11px] text-[#94a3b8] truncate">{u.handle || `@${u.username || 'user'}`}</div>
                 </div>
-                <div>
-                  <div className="text-sm font-bold text-white">{b.name}</div>
-                  <div className="text-xs text-slate-400 mt-0.5">{b.desc}</div>
-                </div>
-              </div>
+              </button>
             );
           })}
         </div>
       </div>
 
-      {/* Modals */}
-      <ChallengeModal
-        isOpen={isChallengeOpen}
-        onClose={() => setIsChallengeOpen(false)}
-      />
+      {/* System Settings & Sign Out */}
+      <div className="bg-[#0f172a] border border-[#1e2d4d] rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={toggleTheme}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#152037] hover:bg-[#1d2c4b] text-[#cbd5e1] hover:text-white text-xs font-semibold border border-[#223252] transition-colors cursor-pointer"
+          >
+            {isDarkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-sky-400" />}
+            <span>{isDarkMode ? 'Light Mode' : 'Dark Mode'}</span>
+          </button>
+        </div>
 
-      <QuestionDetailModal
-        isOpen={Boolean(viewingDetailQuestion)}
-        onClose={() => setViewingDetailQuestion(null)}
-        question={viewingDetailQuestion}
-      />
+        <button
+          onClick={() => {
+            logout();
+            navigate('/');
+          }}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 text-xs font-semibold transition-colors cursor-pointer"
+        >
+          <LogOut className="w-4 h-4" />
+          <span>Sign Out</span>
+        </button>
+      </div>
     </div>
   );
 }

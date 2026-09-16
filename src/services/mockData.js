@@ -1737,3 +1737,153 @@ export const initialDPTransactions = [
     createdAt: new Date(Date.now() - 90000000).toISOString()
   }
 ];
+
+export const initialSubjects = [
+  {
+    id: 'subj_physics',
+    userId: 'user_1',
+    name: 'Physics',
+    description: 'Classical mechanics, electromagnetism, optics, and thermodynamics.',
+    createdAt: new Date(Date.now() - 30 * 86400000).toISOString(),
+    updatedAt: new Date(Date.now() - 2 * 86400000).toISOString()
+  },
+  {
+    id: 'subj_mathematics',
+    userId: 'user_1',
+    name: 'Mathematics',
+    description: 'Calculus, differential equations, linear algebra, and discrete structures.',
+    createdAt: new Date(Date.now() - 28 * 86400000).toISOString(),
+    updatedAt: new Date(Date.now() - 4 * 86400000).toISOString()
+  },
+  {
+    id: 'subj_cs',
+    userId: 'user_1',
+    name: 'Computer Science',
+    description: 'Algorithms, data structures, computation theory, and system design.',
+    createdAt: new Date(Date.now() - 25 * 86400000).toISOString(),
+    updatedAt: new Date(Date.now() - 5 * 86400000).toISOString()
+  }
+];
+
+export const initialRepoQuestions = [
+  {
+    id: 'q_phys_1',
+    userId: 'user_1',
+    subjectId: 'subj_physics',
+    topic: "Newton's Second Law & Cartesian Resolution",
+    questionText: "Explain how Newton's second law can be used to determine the net acceleration of a body when multiple forces act at non-orthogonal angles. Derive the Cartesian components.",
+    difficulty: 'Hard',
+    notes: "Ensure step-by-step orthogonal component breakdown along x and y Cartesian axes followed by Pythagorean magnitude synthesis.",
+    citation: 'Halliday & Resnick, Fundamentals of Physics 11th Ed., Chapter 5 (Force and Motion)',
+    attachments: {
+      images: [],
+      drawings: [],
+      equations: [
+        '\\Sigma F_x = m \\cdot a_x',
+        '\\Sigma F_y = m \\cdot a_y',
+        'a = \\sqrt{(\\Sigma F_x / m)^2 + (\\Sigma F_y / m)^2}'
+      ]
+    },
+    createdAt: new Date(Date.now() - 15 * 86400000).toISOString(),
+    updatedAt: new Date(Date.now() - 2 * 86400000).toISOString()
+  },
+  {
+    id: 'q_phys_2',
+    userId: 'user_1',
+    subjectId: 'subj_physics',
+    topic: 'Rotational Kinetic Energy & Rolling Without Slipping',
+    questionText: 'Derive the expression for the total kinetic energy of a uniform rigid body rolling without slipping along a flat surface. Explain the partition between translational and rotational kinetic energy.',
+    difficulty: 'Medium',
+    notes: 'K_total = 1/2 m v^2 + 1/2 I omega^2. Use the no-slip condition v_cm = omega * R to relate translational and angular velocity.',
+    citation: 'Knight, Physics for Scientists and Engineers 4th Ed., Chapter 12',
+    attachments: {
+      images: [],
+      drawings: [],
+      equations: [
+        'K_{total} = \\frac{1}{2}mv_{cm}^2 + \\frac{1}{2}I\\omega^2',
+        'v_{cm} = \\omega R'
+      ]
+    },
+    createdAt: new Date(Date.now() - 12 * 86400000).toISOString(),
+    updatedAt: new Date(Date.now() - 6 * 86400000).toISOString()
+  },
+  {
+    id: 'q_phys_3',
+    userId: 'user_1',
+    subjectId: 'subj_physics',
+    topic: 'Simple Harmonic Motion & Energy Conservation',
+    questionText: 'Prove that total mechanical energy is conserved in an undamped mass-spring system undergoing simple harmonic motion, and derive the relation between amplitude and maximum velocity.',
+    difficulty: 'Medium',
+    notes: 'E = 1/2 k x^2 + 1/2 m v^2 = 1/2 k A^2. Maximum velocity occurs at equilibrium x = 0 where v_max = A * sqrt(k/m).',
+    citation: 'University Physics with Modern Physics 15th Ed., Chapter 14',
+    attachments: {
+      images: [],
+      drawings: [],
+      equations: [
+        'E = \\frac{1}{2}kx^2 + \\frac{1}{2}mv^2 = \\frac{1}{2}kA^2',
+        'v_{max} = A\\sqrt{\\frac{k}{m}}'
+      ]
+    },
+    createdAt: new Date(Date.now() - 10 * 86400000).toISOString(),
+    updatedAt: new Date(Date.now() - 3 * 86400000).toISOString()
+  },
+  {
+    id: 'q_math_1',
+    userId: 'user_1',
+    subjectId: 'subj_mathematics',
+    topic: 'Fundamental Theorem of Calculus',
+    questionText: 'State and prove the Fundamental Theorem of Calculus (Part 1), demonstrating how differentiation and definite integration act as inverse operations for continuous functions.',
+    difficulty: 'Hard',
+    notes: 'Show that for continuous f on [a, b], d/dx [integral_a^x f(t) dt] = f(x) using the limit definition of the derivative and the Mean Value Theorem for integrals.',
+    citation: 'Stewart Calculus: Early Transcendentals 9th Ed., Chapter 5.3',
+    attachments: {
+      images: [],
+      drawings: [],
+      equations: [
+        '\\frac{d}{dx}\\left[\\int_{a}^{x} f(t)\\,dt\\right] = f(x)'
+      ]
+    },
+    createdAt: new Date(Date.now() - 8 * 86400000).toISOString(),
+    updatedAt: new Date(Date.now() - 4 * 86400000).toISOString()
+  },
+  {
+    id: 'q_math_2',
+    userId: 'user_1',
+    subjectId: 'subj_mathematics',
+    topic: 'Eigenvalues & Characteristic Polynomials',
+    questionText: 'Explain the algebraic and geometric foundations of matrix diagonalization. Under what necessary and sufficient conditions can an n x n matrix A be diagonalized as A = P D P^(-1)?',
+    difficulty: 'Medium',
+    notes: 'A matrix is diagonalizable if and only if it possesses n linearly independent eigenvectors, forming the columns of invertible modal matrix P.',
+    citation: 'Strang, Introduction to Linear Algebra 5th Ed., Chapter 6',
+    attachments: {
+      images: [],
+      drawings: [],
+      equations: [
+        'A = PDP^{-1}',
+        '\\det(A - \\lambda I) = 0'
+      ]
+    },
+    createdAt: new Date(Date.now() - 7 * 86400000).toISOString(),
+    updatedAt: new Date(Date.now() - 5 * 86400000).toISOString()
+  },
+  {
+    id: 'q_cs_1',
+    userId: 'user_1',
+    subjectId: 'subj_cs',
+    topic: "Dijkstra's Shortest Path Algorithm",
+    questionText: "Describe Dijkstra's algorithm for determining single-source shortest paths in a directed weighted graph with non-negative edge weights. Explain how relaxing edges works and state the asymptotic time complexity with a min-heap.",
+    difficulty: 'Medium',
+    notes: 'Greedy strategy: extract min tentative distance vertex, relax outgoing edges. Time complexity is O((V + E) log V).',
+    citation: 'Cormen, Leiserson, Rivest, Stein, Introduction to Algorithms (CLRS) 4th Ed., Chapter 22',
+    attachments: {
+      images: [],
+      drawings: [],
+      equations: [
+        'O((|V| + |E|)\\log |V|)'
+      ]
+    },
+    createdAt: new Date(Date.now() - 5 * 86400000).toISOString(),
+    updatedAt: new Date(Date.now() - 1 * 86400000).toISOString()
+  }
+];
+

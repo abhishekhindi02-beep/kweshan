@@ -10,43 +10,27 @@ export function GameProvider({ children }) {
   const effectiveUser = currentUser || user || dataStore.getCurrentUser();
   const { addToast } = useToast();
 
-  // Reactive state synced with dataStore
-  const [decks, setDecks] = useState(() => dataStore.getDecksForUser(effectiveUser?.id));
-  const [questions, setQuestions] = useState(() => dataStore.questions);
-  const [battles, setBattles] = useState(() => dataStore.battles);
-  const [incomingInvites, setIncomingInvites] = useState(() => dataStore.incomingInvites);
-  const [battleLogs, setBattleLogs] = useState(() => dataStore.battleLogs);
-  const [friends, setFriends] = useState(() => dataStore.friends);
-  const [friendRequests, setFriendRequests] = useState(() => dataStore.friendRequests);
-  const [notifications, setNotifications] = useState(() => dataStore.notifications);
-  const [activities, setActivities] = useState(() => dataStore.getUserActivities(effectiveUser?.id));
-  const [dpTransactions, setDpTransactions] = useState(() => dataStore.dpTransactions);
+  const notifyToast = (msg, type = 'info', title = '') => {
+    if (addToast) addToast({ title: title || msg, message: msg, type });
+  };
 
-  // Active Modals & Workflows
-  const [activeBattleId, setActiveBattleId] = useState(null);
-  const [activeBattleData, setActiveBattleData] = useState(null);
-  const [isLightningActive, setIsLightningActive] = useState(false);
-  const [challengeTargetUser, setChallengeTargetUser] = useState(null);
+  // Reactive state synced with dataStore for active user
+  const [subjects, setSubjects] = useState(() => dataStore.getSubjectsForUser(effectiveUser?.id));
+  const [questions, setQuestions] = useState(() => dataStore.getQuestionsForUser(effectiveUser?.id));
+  const [stats, setStats] = useState(() => dataStore.getRepositoryStats(effectiveUser?.id));
+
+  // Modals & Active UI state
   const [editingQuestion, setEditingQuestion] = useState(null);
   const [isWritingQuestion, setIsWritingQuestion] = useState(false);
-  const [analyticsQuestionId, setAnalyticsQuestionId] = useState(null);
-  const [isInviteFriendOpen, setIsInviteFriendOpen] = useState(false);
-  const [lastBattleResult, setLastBattleResult] = useState(null);
-  const [viewingProfileId, setViewingProfileId] = useState(null);
-  const [practicingDeck, setPracticingDeck] = useState(null);
+  const [activeSubjectModal, setActiveSubjectModal] = useState(null); // { mode: 'create' | 'edit', subject: null }
+  const [confirmDialogData, setConfirmDialogData] = useState(null); // { title, message, onConfirm, confirmLabel, isDanger }
 
   const syncState = useCallback(() => {
     const currentActiveUser = currentUser || user || dataStore.getCurrentUser();
-    setDecks(dataStore.getDecksForUser(currentActiveUser?.id));
-    setQuestions([...dataStore.questions]);
-    setBattles([...dataStore.battles]);
-    setIncomingInvites([...dataStore.incomingInvites]);
-    setBattleLogs([...dataStore.battleLogs]);
-    setFriends([...dataStore.friends]);
-    setFriendRequests([...dataStore.friendRequests]);
-    setNotifications([...dataStore.notifications]);
-    setActivities(dataStore.getUserActivities(currentActiveUser?.id));
-    setDpTransactions([...dataStore.dpTransactions]);
+    const currentUserId = currentActiveUser?.id || 'user_1';
+    setSubjects(dataStore.getSubjectsForUser(currentUserId));
+    setQuestions(dataStore.getQuestionsForUser(currentUserId));
+    setStats(dataStore.getRepositoryStats(currentUserId));
   }, [currentUser, user]);
 
   useEffect(() => {
@@ -57,364 +41,135 @@ export function GameProvider({ children }) {
     return unsubscribe;
   }, [syncState]);
 
-  // Computed Values strictly for the active user
-  const unreadNotificationsCount = notifications.filter(
-    (n) => !n.read && (n.userId === effectiveUser?.id || !n.userId)
-  ).length;
-  
-  const waitingBattlesCount = battles.filter(
-    (b) => b.status === 'your_turn' && (b.challengerId === effectiveUser?.id || b.opponentId === effectiveUser?.id)
-  ).length;
+  // --- SUBJECT OPERATIONS ---
+  const getSubject = useCallback((subjectId) => {
+    return dataStore.getSubjectById(subjectId, effectiveUser?.id);
+  }, [effectiveUser]);
 
-  const userQuestions = questions.filter((q) => q.authorId === effectiveUser?.id);
-  const pendingQuestionsCount = userQuestions.filter(
-    (q) => q.status === 'Pending Review' || q.status === 'pending'
-  ).length;
-
-  const leaderboard = dataStore.getLeaderboard('monthly');
-
-  // --- Battle Actions ---
-  const startBattleWith = (opponentId, deckId = 'deck_1', subject = 'Academic Duel', format = 'standard') => {
-    const battle = dataStore.createBattle(opponentId, deckId, subject, format);
-    setActiveBattleId(battle.id);
-    setActiveBattleData(battle);
-    if (addToast) {
-      addToast({ title: 'Battle Started', message: `Round 1 ready against ${battle.opponentName}`, type: 'success' });
-    }
-    return battle;
-  };
-
-  const playDailyLightning = () => {
-    const battle = dataStore.startLightningArena();
-    setActiveBattleId(battle.id);
-    setIsLightningActive(true);
-    if (addToast) {
-      addToast({ title: 'Lightning Arena', message: '10 rapid-fire prompts! Double DP Event.', type: 'info' });
-    }
-    return battle;
-  };
-
-  const playRound = (battleId) => {
-    setActiveBattleId(battleId);
-  };
-
-  const submitAnswer = (battleId, roundNumber, selectedOptionId, responseTimeMs) => {
-    const outcome = dataStore.submitBattleAnswer(battleId, roundNumber, selectedOptionId, responseTimeMs);
-    if (outcome.isGameOver) {
-      setLastBattleResult(outcome);
-      setActiveBattleId(null);
-      setIsLightningActive(false);
-    }
-    return outcome;
-  };
-
-  const acceptInvite = (inviteId) => {
-    const battle = dataStore.acceptInvite(inviteId);
-    if (battle) {
-      setActiveBattleId(battle.id);
-      if (addToast) {
-        addToast({ title: 'Invite Accepted', message: `Entering battle against ${battle.opponentName}`, type: 'success' });
-      }
-    }
-    return battle;
-  };
-
-  const declineInvite = (inviteId) => {
-    dataStore.declineInvite(inviteId);
-    if (addToast) {
-      addToast({ title: 'Invite Declined', message: 'Challenge removed from your feed', type: 'info' });
-    }
-  };
-
-  // --- Practice Deck Mode ---
-  const startPracticeDeck = (deckId) => {
-    const deck = decks.find((d) => d.id === deckId) || decks[0];
-    setPracticingDeck(deck);
-  };
-
-  const getPracticeQuestions = (deckId, count = 5) => {
-    return dataStore.getPracticeQuestions(deckId, count);
-  };
-
-  const completePracticeDeck = (deckId, correctCount, totalCount) => {
-    const masteryDelta = Math.round((correctCount / (totalCount || 1)) * 10);
-    const dpGained = correctCount * 10;
-    
-    // Update deck progress for this user in dataStore
-    dataStore.updateDeckMastery(deckId, masteryDelta, effectiveUser?.id);
-
-    if (dpGained > 0 && effectiveUser) {
-      const deck = decks.find((d) => d.id === deckId);
-      dataStore.addDPTransaction(
-        effectiveUser.id,
-        dpGained,
-        `Practice Session: ${deck?.title || 'Academic Deck'} (${correctCount}/${totalCount} correct)`,
-        'practice',
-        deckId
-      );
-      dataStore.addActivity(
-        effectiveUser.id,
-        'practice_completed',
-        'Practice Completed',
-        `Completed practice in ${deck?.title || 'Deck'} (+${dpGained} DP).`,
-        '#0df2c9',
-        'BookOpen'
-      );
-    }
-
-    setPracticingDeck(null);
-    if (addToast) {
-      addToast({
-        title: 'Practice Session Completed!',
-        message: `Scored ${correctCount}/${totalCount} • Earned +${dpGained} DP!`,
-        type: 'success'
-      });
-    }
-  };
-
-  // --- Question Actions ---
-  const saveQuestion = (questionData) => {
-    if (editingQuestion) {
-      const updated = dataStore.updateQuestion(editingQuestion.id, questionData);
-      setEditingQuestion(null);
-      if (addToast) {
-        addToast({ title: 'Question Updated', message: `Saved changes to "${updated?.topic || updated?.prompt}"`, type: 'success' });
-      }
-      return updated;
-    } else {
-      const created = dataStore.createQuestion({ ...questionData, authorId: effectiveUser?.id, authorName: effectiveUser?.name });
-      setIsWritingQuestion(false);
-      if (addToast) {
-        addToast({ title: 'Question Saved', message: `Saved "${created.topic || created.prompt}" as ${created.status}`, type: 'success' });
-      }
-      return created;
-    }
-  };
-
-  const createQuestion = (questionData) => {
-    return dataStore.createQuestion({ ...questionData, authorId: effectiveUser?.id, authorName: effectiveUser?.name });
-  };
-
-  const updateQuestion = (id, updates) => {
-    return dataStore.updateQuestion(id, updates);
-  };
-
-  const submitForReview = (questionId) => {
-    const updated = dataStore.updateQuestion(questionId, { status: 'Pending Review' });
-    if (updated && effectiveUser) {
-      dataStore.addActivity(
-        effectiveUser.id,
-        'question_submitted',
-        'Question Submitted for Review',
-        `"${updated.topic || updated.prompt}" queued for peer verification.`,
-        '#f59e0b',
-        'FileEdit'
-      );
-      if (addToast) {
-        addToast({ title: 'Submitted for Review', message: 'Peer council will review question quality shortly.', type: 'info' });
-      }
-    }
-    return updated;
-  };
-
-  const approveQuestion = (questionId) => {
-    const approved = dataStore.approveQuestion(questionId);
-    if (approved && addToast) {
-      addToast({ title: 'Question Approved (+30 DP)', message: `"${approved.topic || approved.prompt}" is now Live!`, type: 'success' });
-    }
-    return approved;
-  };
-
-  const rejectQuestion = (questionId) => {
-    const updated = dataStore.updateQuestion(questionId, { status: 'Draft' });
-    if (addToast) {
-      addToast({ title: 'Question Returned', message: 'Question returned to draft status with revision notes.', type: 'info' });
-    }
-    return updated;
-  };
-
-  const deleteQuestion = (questionId) => {
-    dataStore.deleteQuestion(questionId);
-    if (addToast) {
-      addToast({ title: 'Question Deleted', message: 'Question removed from your repository.', type: 'info' });
-    }
-  };
-
-  const recordQuestionAttempt = (questionId, selectedOptionIdx, isCorrect, responseTimeMs) => {
-    // Record if question exists
-  };
-
-  // --- Friend Actions ---
-  const sendFriendRequest = (username) => {
-    const res = dataStore.sendFriendRequest(username);
+  const createSubject = useCallback(({ name, description }) => {
+    const res = dataStore.createSubject({
+      userId: effectiveUser?.id,
+      name,
+      description
+    });
     if (res.error) {
-      if (addToast) addToast({ title: 'Request Failed', message: res.error, type: 'error' });
-      return false;
+      notifyToast(res.error, 'error', 'Subject Creation');
+      return res;
     }
-    if (addToast) addToast({ title: 'Friend Request Sent', message: `Connection invite dispatched to @${username}`, type: 'success' });
-    return true;
-  };
-
-  const acceptFriendRequest = (requestId) => {
-    const res = dataStore.acceptFriendRequest(requestId);
-    if (res.success && addToast) {
-      addToast({ title: 'Friend Added', message: `Added ${res.friend.name} to study circle!`, type: 'success' });
-    }
+    notifyToast(`Subject "${res.subject.name}" created successfully.`, 'success', 'Subject Created');
+    syncState();
     return res;
-  };
+  }, [effectiveUser, syncState]);
 
-  const ignoreFriendRequest = (requestId) => {
-    dataStore.declineFriendRequest(requestId);
-    if (addToast) addToast({ title: 'Request Dismissed', message: 'Friend invitation removed.', type: 'info' });
-  };
-
-  const removeFriend = (friendId) => {
-    dataStore.removeFriend(friendId);
-    if (addToast) addToast({ title: 'Friend Removed', message: 'Removed connection from study circle.', type: 'info' });
-  };
-
-  // --- Notification Actions ---
-  const markNotificationRead = (notifId) => {
-    dataStore.markNotificationAsRead(notifId);
-  };
-
-  const markAllNotificationsRead = () => {
-    dataStore.markAllNotificationsAsRead();
-    if (addToast) addToast({ title: 'Notifications Cleared', message: 'Marked all notifications as read.', type: 'info' });
-  };
-
-  const handleNotificationAction = (notif) => {
-    if (!notif) return;
-    markNotificationRead(notif.id);
-
-    const titleLower = (notif.title || '').toLowerCase();
-    const msgLower = (notif.message || '').toLowerCase();
-    const type = notif.type || '';
-
-    const isBattleAlert = 
-      type === 'battle' || 
-      type === 'battle_challenge' || 
-      type === 'battle_invite' || 
-      type === 'challenge_dispatched' ||
-      titleLower.includes('challenge') || 
-      titleLower.includes('duel') || 
-      titleLower.includes('battle') ||
-      msgLower.includes('challenged');
-
-    if (isBattleAlert) {
-      if (notif.metadata?.battleId) {
-        const existing = dataStore.battles.find((b) => b.id === notif.metadata.battleId);
-        if (existing) {
-          setActiveBattleId(existing.id);
-          setActiveBattleData(existing);
-          return;
-        }
-      }
-      const deckId = notif.metadata?.deckId || 'deck_1';
-      const opponentId = notif.metadata?.challengerId || notif.metadata?.opponentId || 'user_2';
-      startBattleWith(opponentId, deckId);
+  const updateSubject = useCallback((subjectId, { name, description }) => {
+    const res = dataStore.updateSubject(subjectId, { name, description }, effectiveUser?.id);
+    if (res.error) {
+      notifyToast(res.error, 'error', 'Subject Update');
+      return res;
     }
-  };
+    notifyToast(`Subject "${res.subject.name}" updated.`, 'success', 'Subject Updated');
+    syncState();
+    return res;
+  }, [effectiveUser, syncState]);
 
-  const globalSearch = (queryStr) => {
-    const q = (queryStr || '').toLowerCase().trim();
-    if (!q) return { players: [], questions: [], decks: [] };
+  const deleteSubject = useCallback((subjectId) => {
+    const subject = dataStore.getSubjectById(subjectId, effectiveUser?.id);
+    const res = dataStore.deleteSubject(subjectId, effectiveUser?.id);
+    if (res.error) {
+      notifyToast(res.error, 'error', 'Delete Subject');
+      return res;
+    }
+    notifyToast(`Subject "${subject?.name || ''}" and its questions were removed.`, 'info', 'Subject Deleted');
+    syncState();
+    return res;
+  }, [effectiveUser, syncState]);
 
-    const matchedPlayers = dataStore.users.filter(u => 
-      u.name.toLowerCase().includes(q) || 
-      u.username.toLowerCase().includes(q) ||
-      (u.handle && u.handle.toLowerCase().includes(q))
-    ).slice(0, 4);
+  // --- QUESTION OPERATIONS ---
+  const getQuestion = useCallback((questionId) => {
+    return dataStore.getQuestionById(questionId, effectiveUser?.id);
+  }, [effectiveUser]);
 
-    const matchedQuestions = dataStore.questions.filter(qu =>
-      (qu.prompt || qu.text || '').toLowerCase().includes(q) ||
-      (qu.topic || '').toLowerCase().includes(q)
-    ).slice(0, 4);
+  const getQuestions = useCallback((options = {}) => {
+    return dataStore.getQuestionsForUser(effectiveUser?.id, options);
+  }, [effectiveUser]);
 
-    const matchedDecks = decks.filter(d =>
-      d.title.toLowerCase().includes(q) ||
-      (d.description || '').toLowerCase().includes(q)
-    ).slice(0, 3);
+  const createQuestion = useCallback((questionData) => {
+    const res = dataStore.createQuestion({
+      userId: effectiveUser?.id,
+      ...questionData
+    });
+    if (res.error) {
+      notifyToast(res.error, 'error', 'Add Question');
+      return res;
+    }
+    notifyToast('Question added to your repository.', 'success', 'Question Saved');
+    syncState();
+    return res;
+  }, [effectiveUser, syncState]);
 
-    return { players: matchedPlayers, questions: matchedQuestions, decks: matchedDecks };
-  };
+  const updateQuestion = useCallback((questionId, updates) => {
+    const res = dataStore.updateQuestion(questionId, updates, effectiveUser?.id);
+    if (res.error) {
+      notifyToast(res.error, 'error', 'Update Question');
+      return res;
+    }
+    notifyToast('Question updated successfully.', 'success', 'Question Saved');
+    syncState();
+    return res;
+  }, [effectiveUser, syncState]);
+
+  const deleteQuestion = useCallback((questionId) => {
+    const res = dataStore.deleteQuestion(questionId, effectiveUser?.id);
+    if (res.error) {
+      notifyToast(res.error, 'error', 'Delete Question');
+      return res;
+    }
+    notifyToast('Question deleted from repository.', 'info', 'Question Removed');
+    syncState();
+    return res;
+  }, [effectiveUser, syncState]);
+
+  // --- GLOBAL SEARCH ---
+  const globalSearch = useCallback((query) => {
+    return dataStore.globalSearch(query, effectiveUser?.id);
+  }, [effectiveUser]);
 
   return (
     <GameContext.Provider
       value={{
-        // State
-        decks,
+        // Data
+        subjects,
         questions,
-        battles,
-        battleInvites: incomingInvites,
-        incomingInvites,
-        battleLogs,
-        friends,
-        friendRequests,
-        notifications,
-        activities,
-        dpTransactions,
-        leaderboard,
-        userQuestions,
-        unreadNotificationsCount,
-        waitingBattlesCount,
-        pendingQuestionsCount,
-        // Active Modals & Flow
-        activeBattleId,
-        setActiveBattleId,
-        activeBattleData,
-        setActiveBattleData,
-        isLightningActive,
-        setIsLightningActive,
-        challengeTargetUser,
-        setChallengeTargetUser,
+        stats,
+        // UI & Modals State
         editingQuestion,
         setEditingQuestion,
         isWritingQuestion,
         setIsWritingQuestion,
-        analyticsQuestionId,
-        setAnalyticsQuestionId,
-        isInviteFriendOpen,
-        setIsInviteFriendOpen,
-        lastBattleResult,
-        setLastBattleResult,
-        viewingProfileId,
-        setViewingProfileId,
-        practicingDeck,
-        setPracticingDeck,
-        // Actions & Aliases
-        startBattleWith,
-        playDailyLightning,
-        playRound,
-        submitAnswer,
-        acceptInvite,
-        acceptBattleInvite: acceptInvite,
-        declineInvite,
-        declineBattleInvite: declineInvite,
-        startPracticeDeck,
-        getPracticeQuestions,
-        completePracticeDeck,
-        saveQuestion,
+        activeSubjectModal,
+        setActiveSubjectModal,
+        confirmDialogData,
+        setConfirmDialogData,
+        // Subject Methods
+        getSubject,
+        createSubject,
+        updateSubject,
+        deleteSubject,
+        // Question Methods
+        getQuestion,
+        getQuestions,
         createQuestion,
         updateQuestion,
-        submitForReview,
-        demoApproveQuestion: approveQuestion,
-        approveQuestion,
-        rejectQuestion,
         deleteQuestion,
-        recordQuestionAttempt,
-        sendFriendRequest,
-        acceptFriendRequest,
-        ignoreFriendRequest,
-        declineFriendRequest: ignoreFriendRequest,
-        removeFriend,
-        markNotificationRead,
-        markNotificationAsRead: markNotificationRead,
-        markAllNotificationsRead,
-        markAllNotificationsAsRead: markAllNotificationsRead,
-        handleNotificationAction,
-        getLeaderboard: (timeframe) => dataStore.getLeaderboard(timeframe),
-        globalSearch
+        // Search & Stats
+        globalSearch,
+        refreshState: syncState,
+        // Legacy backward compatibility stubs
+        decks: subjects,
+        battles: [],
+        friends: [],
+        notifications: [],
+        unreadNotificationsCount: 0
       }}
     >
       {children}
@@ -425,3 +180,4 @@ export function GameProvider({ children }) {
 export function useGame() {
   return useContext(GameContext);
 }
+export default GameContext;

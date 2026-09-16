@@ -2,19 +2,18 @@ import React from 'react';
 import { NavLink, Link, useNavigate } from 'react-router-dom';
 import {
   Home,
-  FileEdit,
-  Swords,
-  Users,
-  Trophy,
-  Bell,
-  BookOpen,
+  Layers,
+  FileText,
+  User,
   Moon,
   Sun,
   LogOut,
-  ExternalLink,
+  FolderPlus,
+  Plus,
   ChevronRight,
   Menu,
-  X
+  X,
+  BookOpen
 } from 'lucide-react';
 import Avatar from '../common/Avatar';
 import { useAuth } from '../../context/AuthContext';
@@ -22,20 +21,21 @@ import { useGame } from '../../context/GameContext';
 import { useTheme } from '../../context/ThemeContext';
 
 export default function Sidebar({ isMobileOpen, onCloseMobile }) {
-  const { currentUser, user, switchUser, allUsers, logout } = useAuth();
-  const effectiveUser = currentUser || user || { name: 'Scholar', level: 1, avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100' };
-  const { unreadNotificationsCount } = useGame();
+  const { currentUser, user, logout } = useAuth();
+  const effectiveUser = currentUser || user || { 
+    name: 'Scholar', 
+    handle: '@scholar',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100' 
+  };
+  const { subjects, questions } = useGame();
   const { isDarkMode, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
   const navItems = [
     { to: '/', label: 'Home', icon: Home, end: true },
-    { to: '/questions', label: 'My Questions', icon: FileEdit },
-    { to: '/battles', label: 'Battles', icon: Swords },
-    { to: '/decks', label: 'Decks', icon: BookOpen },
-    { to: '/friends', label: 'Friends', icon: Users },
-    { to: '/leaderboard', label: 'Leaderboard', icon: Trophy },
-    { to: '/notifications', label: 'Notifications', icon: Bell, badge: unreadNotificationsCount }
+    { to: '/subjects', label: 'Subjects', icon: Layers, count: subjects.length },
+    { to: '/questions', label: 'My Questions', icon: FileText, count: questions.length },
+    { to: '/profile', label: 'Profile', icon: User }
   ];
 
   return (
@@ -64,9 +64,14 @@ export default function Sidebar({ isMobileOpen, onCloseMobile }) {
               <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#0df2c9] to-[#00bfa5] flex items-center justify-center text-slate-950 font-black shadow-md shadow-[#0df2c9]/20 group-hover:scale-105 transition-transform">
                 K
               </div>
-              <span className="text-lg font-extrabold text-white tracking-tight group-hover:text-[#0df2c9] transition-colors">
-                Kweshun
-              </span>
+              <div>
+                <span className="text-lg font-extrabold text-white tracking-tight group-hover:text-[#0df2c9] transition-colors block leading-none">
+                  Kweshun
+                </span>
+                <span className="text-[10px] font-semibold text-[#64748b] tracking-wider uppercase block mt-1">
+                  Question Repository
+                </span>
+              </div>
             </Link>
             <button
               onClick={onCloseMobile}
@@ -76,8 +81,26 @@ export default function Sidebar({ isMobileOpen, onCloseMobile }) {
             </button>
           </div>
 
-          {/* Navigation Links with NavLink */}
-          <nav className="p-4 space-y-1.5">
+          {/* Quick Create Question Action */}
+          <div className="p-4 pb-2">
+            <button
+              onClick={() => {
+                onCloseMobile();
+                if (subjects.length > 0) {
+                  navigate(`/subjects/${subjects[0].id}/questions/new`);
+                } else {
+                  navigate('/subjects');
+                }
+              }}
+              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#0df2c9] to-[#00bfa5] text-slate-950 font-bold text-xs shadow-md shadow-[#0df2c9]/20 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>+ Add Question</span>
+            </button>
+          </div>
+
+          {/* Navigation Links */}
+          <nav className="p-4 pt-2 space-y-1">
             {navItems.map((item) => {
               const Icon = item.icon;
 
@@ -88,23 +111,27 @@ export default function Sidebar({ isMobileOpen, onCloseMobile }) {
                   end={item.end}
                   onClick={onCloseMobile}
                   className={({ isActive }) =>
-                    `w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-all duration-150 ${
+                    `w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all duration-150 ${
                       isActive
-                        ? 'bg-[#152037] text-[#0df2c9] border border-[#0df2c9]/30 font-semibold shadow-sm shadow-[#0df2c9]/5'
-                        : 'text-[#94a3b8] hover:text-white hover:bg-[#111827]'
+                        ? 'bg-[#121c2e] text-[#0df2c9] font-semibold border-l-2 border-[#0df2c9]'
+                        : 'text-[#94a3b8] hover:bg-[#131b2e] hover:text-white'
                     }`
                   }
                 >
                   {({ isActive }) => (
                     <>
-                      <div className="flex items-center gap-3.5">
-                        <Icon className={`w-5 h-5 ${isActive ? 'text-[#0df2c9]' : 'text-[#64748b]'}`} />
+                      <div className="flex items-center gap-3">
+                        <Icon className={`w-4 h-4 ${isActive ? 'text-[#0df2c9]' : 'text-[#64748b]'}`} />
                         <span>{item.label}</span>
                       </div>
 
-                      {item.badge > 0 && (
-                        <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-[#8b5cf6] text-white">
-                          {item.badge}
+                      {typeof item.count === 'number' && (
+                        <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-md ${
+                          isActive
+                            ? 'bg-[#0df2c9]/15 text-[#0df2c9]'
+                            : 'bg-[#1a2438] text-[#64748b]'
+                        }`}>
+                          {item.count}
                         </span>
                       )}
                     </>
@@ -115,106 +142,47 @@ export default function Sidebar({ isMobileOpen, onCloseMobile }) {
           </nav>
         </div>
 
-        {/* Bottom Area */}
+        {/* Bottom User / Footer Section */}
         <div className="p-4 border-t border-[#162035] space-y-3">
-          {/* Dark Mode Toggle */}
-          <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-[#111827] border border-[#1c273e]">
-            <div className="flex items-center gap-2.5 text-xs font-medium text-[#94a3b8]">
-              {isDarkMode ? <Moon className="w-4 h-4 text-[#0df2c9]" /> : <Sun className="w-4 h-4 text-[#f59e0b]" />}
-              <span className="font-semibold">{isDarkMode ? 'Dark Mode' : 'Light Mode'}</span>
+          {/* Quick User Badge */}
+          <Link
+            to="/profile"
+            onClick={onCloseMobile}
+            className="flex items-center gap-3 p-2 rounded-xl hover:bg-[#131b2e] transition-colors group cursor-pointer"
+          >
+            <Avatar src={effectiveUser.avatar} alt={effectiveUser.name} size="sm" />
+            <div className="min-w-0 flex-1">
+              <div className="text-xs font-bold text-white group-hover:text-[#0df2c9] transition-colors truncate">
+                {effectiveUser.name}
+              </div>
+              <div className="text-[10px] text-[#64748b] truncate">
+                {effectiveUser.handle || `@${effectiveUser.username || 'user'}`}
+              </div>
             </div>
+            <ChevronRight className="w-3.5 h-3.5 text-[#64748b] group-hover:text-white" />
+          </Link>
+
+          {/* Theme & Logout Row */}
+          <div className="flex items-center justify-between pt-2 border-t border-[#141d30]">
             <button
               onClick={toggleTheme}
-              aria-label="Toggle Dark / Light Mode"
-              className={`w-11 h-6 rounded-full transition-colors relative p-0.5 cursor-pointer ${
-                isDarkMode ? 'bg-[#0df2c9]' : 'bg-[#cbd5e1]'
-              }`}
+              className="p-2 rounded-lg text-[#94a3b8] hover:text-white hover:bg-[#131b2e] transition-colors"
+              title="Toggle Theme"
             >
-              <div
-                className={`w-5 h-5 rounded-full transition-transform duration-200 ${
-                  isDarkMode ? 'bg-[#090d16] translate-x-5' : 'bg-white translate-x-0 shadow-sm'
-                }`}
-              />
+              {isDarkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-sky-400" />}
+            </button>
+
+            <button
+              onClick={() => {
+                logout();
+                navigate('/');
+              }}
+              className="p-2 rounded-lg text-[#94a3b8] hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+              title="Sign Out"
+            >
+              <LogOut className="w-4 h-4" />
             </button>
           </div>
-
-          {/* User Profile Card */}
-          <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#131b2e] border border-[#1f2d47]">
-            <Link
-              to={`/profile/${effectiveUser.id || 'usr-1'}`}
-              onClick={onCloseMobile}
-              className="flex items-center gap-3 min-w-0 flex-1 group"
-            >
-              <div className="relative flex-shrink-0">
-                <Avatar
-                  src={effectiveUser.avatar}
-                  name={effectiveUser.name}
-                  size="sm"
-                  className="group-hover:border-[#0df2c9] transition-colors"
-                  showStatus={true}
-                  status="online"
-                />
-              </div>
-              <div className="min-w-0">
-                <div className="text-xs font-bold text-white truncate group-hover:text-[#0df2c9] transition-colors">
-                  {effectiveUser.name}
-                </div>
-                <div className="text-[10px] font-mono tracking-wide text-[#64748b]">
-                  {effectiveUser.rank || `Lvl ${effectiveUser.level || 1}`}
-                </div>
-              </div>
-            </Link>
-
-            {/* Quick Demo Profile Switcher & Logout */}
-            <div className="flex items-center gap-1">
-              <div className="relative group">
-                <button
-                  title="Switch profile"
-                  className="p-1.5 rounded-lg text-[#64748b] hover:text-[#0df2c9] hover:bg-[#1a233a] transition-colors"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-                <div className="absolute bottom-full right-0 mb-2 w-48 bg-[#101726] border border-[#1f2d47] rounded-xl shadow-2xl p-2 hidden group-hover:block z-50">
-                  <div className="text-[10px] font-mono uppercase tracking-wider text-[#64748b] px-2 py-1">
-                    Switch Account
-                  </div>
-                  {allUsers?.map((u) => (
-                    <button
-                      key={u.id}
-                      onClick={() => switchUser(u.id)}
-                      className={`w-full text-left px-2 py-1.5 rounded-lg text-xs flex items-center justify-between cursor-pointer ${
-                        u.id === effectiveUser.id ? 'bg-[#0df2c9]/20 text-[#0df2c9] font-bold' : 'text-[#94a3b8] hover:bg-[#1a233a] hover:text-white'
-                      }`}
-                    >
-                      <span className="truncate">{u.name}</span>
-                      <span className="text-[10px] font-mono text-[#64748b]">Lvl {u.level || 1}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <button
-                onClick={() => {
-                  logout();
-                  navigate('/');
-                }}
-                title="Sign out"
-                className="p-1.5 rounded-lg text-[#64748b] hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          {/* View Public Site Link */}
-          <Link
-            to="/"
-            onClick={onCloseMobile}
-            className="w-full text-left text-[11px] font-mono tracking-widest uppercase text-[#64748b] hover:text-[#0df2c9] transition-colors flex items-center justify-between px-1"
-          >
-            <span>VIEW DASHBOARD</span>
-            <ExternalLink className="w-3.5 h-3.5" />
-          </Link>
         </div>
       </aside>
     </>

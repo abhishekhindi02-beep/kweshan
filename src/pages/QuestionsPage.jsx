@@ -1,271 +1,201 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { useLocation, useParams, useNavigate } from 'react-router-dom';
-import { Plus, Search, Filter, Sparkles, CheckCircle2, Clock, FileText, BookOpen } from 'lucide-react';
-import QualityDashboard from '../components/questions/QualityDashboard';
-import QuestionCard from '../components/questions/QuestionCard';
-import QuestionModal from '../components/questions/QuestionModal';
-import QuestionDetailModal from '../components/questions/QuestionDetailModal';
-import Badge from '../components/common/Badge';
+import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { 
+  FileText, Search, X, Plus, Filter, ArrowUpDown, 
+  Layers, BookOpen 
+} from 'lucide-react';
 import { useGame } from '../context/GameContext';
-import { useAuth } from '../context/AuthContext';
-import { useToast } from '../context/ToastContext';
+import QuestionCard from '../components/questions/QuestionCard';
+import ConfirmDialog from '../components/common/ConfirmDialog';
+import EmptyState from '../components/common/EmptyState';
 
 export default function QuestionsPage() {
-  const { questions, decks, approveQuestion, rejectQuestion, deleteQuestion, submitForReview } = useGame();
-  const { user, currentUser } = useAuth();
-  const effectiveUser = currentUser || user || { id: 'user_1', name: 'Dr. Elena Rostova' };
-  const { showToast } = useToast();
-  const location = useLocation();
-  const params = useParams();
   const navigate = useNavigate();
+  const { subjects, questions, getQuestions, deleteQuestion } = useGame();
 
-  const [activeTab, setActiveTab] = useState('my'); // my, all, approved, pending, draft
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedDeck, setSelectedDeck] = useState('all');
+  const [selectedSubjectId, setSelectedSubjectId] = useState('all');
   const [selectedDifficulty, setSelectedDifficulty] = useState('all');
+  const [sortBy, setSortBy] = useState('recent'); // 'recent' | 'updated' | 'alphabetical' | 'oldest'
 
-  const [isAuthorModalOpen, setIsAuthorModalOpen] = useState(false);
-  const [editingQuestion, setEditingQuestion] = useState(null);
-  const [viewingDetailQuestion, setViewingDetailQuestion] = useState(null);
-
-  // Sync route state with modals
-  useEffect(() => {
-    if (location.pathname === '/questions/new') {
-      setIsAuthorModalOpen(true);
-      setEditingQuestion(null);
-    } else if (params.id && questions.length > 0) {
-      const targetQ = questions.find((q) => q.id === params.id);
-      if (targetQ) {
-        setViewingDetailQuestion(targetQ);
-      }
-    }
-  }, [location.pathname, params.id, questions]);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   const filteredQuestions = useMemo(() => {
-    return questions.filter((q) => {
-      const statusLower = (q.status || '').toLowerCase();
-      
-      // Tab filter
-      if (activeTab === 'my') {
-        if (q.authorId !== effectiveUser.id) return false;
-      } else if (activeTab === 'approved') {
-        if (statusLower !== 'approved' && statusLower !== 'live') return false;
-      } else if (activeTab === 'pending') {
-        if (statusLower !== 'pending' && statusLower !== 'pending review') return false;
-      } else if (activeTab === 'draft') {
-        if (statusLower !== 'draft') return false;
-      }
-
-      // Deck filter
-      if (selectedDeck !== 'all' && q.deckId !== selectedDeck) return false;
-
-      // Difficulty filter
-      if (selectedDifficulty !== 'all' && (q.difficulty || '').toLowerCase() !== selectedDifficulty.toLowerCase()) return false;
-
-      // Search
-      if (searchQuery.trim()) {
-        const query = searchQuery.toLowerCase();
-        const matchesPrompt = (q.prompt || q.text || '').toLowerCase().includes(query);
-        const matchesTopic = (q.topic || '').toLowerCase().includes(query);
-        const matchesDeck = (q.deckName || '').toLowerCase().includes(query);
-        const matchesCitation = (q.citation || q.citations || '').toLowerCase().includes(query);
-        if (!matchesPrompt && !matchesTopic && !matchesDeck && !matchesCitation) return false;
-      }
-
-      return true;
+    return getQuestions({
+      subjectId: selectedSubjectId,
+      difficulty: selectedDifficulty,
+      search: searchQuery,
+      sort: sortBy
     });
-  }, [questions, activeTab, selectedDeck, selectedDifficulty, searchQuery, effectiveUser.id]);
+  }, [getQuestions, selectedSubjectId, selectedDifficulty, searchQuery, sortBy]);
 
-  const handleEdit = (q) => {
-    setEditingQuestion(q);
-    setIsAuthorModalOpen(true);
+  const handleConfirmDelete = () => {
+    if (deleteTarget) {
+      deleteQuestion(deleteTarget.id);
+      setDeleteTarget(null);
+    }
   };
-
-  const handleCreateNew = () => {
-    setEditingQuestion(null);
-    setIsAuthorModalOpen(true);
-  };
-
-  const handleApprove = (qId) => {
-    approveQuestion(qId);
-  };
-
-  const handleReject = (qId) => {
-    rejectQuestion(qId);
-  };
-
-  const handleDelete = (qId) => {
-    deleteQuestion(qId);
-  };
-
-  const handleSubmitForReview = (qId) => {
-    submitForReview(qId);
-  };
-
-  // Tab counts
-  const userAuthoredQuestions = questions.filter((q) => q.authorId === effectiveUser.id);
-  const countMy = userAuthoredQuestions.length;
-  const countAll = questions.length;
-  const countApproved = questions.filter(
-    (q) => (q.status || '').toLowerCase() === 'live' || (q.status || '').toLowerCase() === 'approved'
-  ).length;
-  const countPending = questions.filter(
-    (q) => (q.status || '').toLowerCase() === 'pending' || (q.status || '').toLowerCase() === 'pending review'
-  ).length;
-  const countDraft = questions.filter((q) => (q.status || '').toLowerCase() === 'draft').length;
 
   return (
-    <div className="space-y-6 animate-fadeIn">
-      {/* Top Header & CTA */}
+    <div className="space-y-6 pb-16 animate-fade-in max-w-7xl mx-auto">
+      {/* Header & Quick Action */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2.5">
-            <Sparkles className="w-6 h-6 text-[#0df2c9]" />
-            Long-Form Question Authoring
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+            My Questions
           </h1>
-          <p className="text-xs sm:text-sm text-slate-400 mt-1">
-            Author comprehensive academic questions with attached diagrams, freehand drawings, and mathematical proofs.
+          <p className="text-xs sm:text-sm text-[#94a3b8] mt-1">
+            Browse, search, and organize all questions across your academic subjects
           </p>
         </div>
 
         <button
-          onClick={handleCreateNew}
-          className="px-5 py-2.5 bg-gradient-to-r from-[#0df2c9] to-[#00bfa5] text-slate-950 font-black text-xs sm:text-sm rounded-xl hover:shadow-lg hover:shadow-[#0df2c9]/30 transition-all flex items-center justify-center gap-2 self-start sm:self-auto cursor-pointer shadow-md"
+          onClick={() => {
+            if (subjects.length > 0) {
+              const targetSubj = selectedSubjectId !== 'all' ? selectedSubjectId : subjects[0].id;
+              navigate(`/subjects/${targetSubj}/questions/new`);
+            } else {
+              navigate('/subjects');
+            }
+          }}
+          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#0df2c9] to-[#00bfa5] text-slate-950 font-bold text-sm shadow-md shadow-[#0df2c9]/20 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer shrink-0"
         >
-          <Plus className="w-4 h-4 stroke-[3]" />
-          Author Question (+30 DP)
+          <Plus className="w-4 h-4" />
+          <span>+ Add Question</span>
         </button>
       </div>
 
-      {/* Quality Engine Metrics Dashboard */}
-      <QualityDashboard questions={questions} />
-
-      {/* Filters and Search Bar */}
-      <div className="bg-[#111927] border border-[#22334d] p-4 rounded-2xl space-y-4 shadow-sm">
-        {/* Tab Selection */}
-        <div className="flex items-center gap-2 border-b border-[#22334d] pb-3 overflow-x-auto">
-          {[
-            { id: 'my', label: 'My Authored Questions', count: countMy },
-            { id: 'all', label: 'All Repository', count: countAll },
-            { id: 'approved', label: 'Live / Approved', count: countApproved },
-            { id: 'pending', label: 'Peer Review', count: countPending },
-            { id: 'draft', label: 'Drafts', count: countDraft }
-          ].map((tab) => (
+      {/* Filter and Search Controls Bar */}
+      <div className="bg-[#0f172a] border border-[#1e2d4d] rounded-2xl p-4 shadow-md space-y-3">
+        {/* Search Field */}
+        <div className="relative w-full">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#64748b]" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search questions by text, topic, notes, formulas, citation, or subject..."
+            className="w-full pl-10 pr-9 py-2.5 bg-[#0a0f1d] border border-[#1f2d47] focus:border-[#0df2c9] rounded-xl text-sm text-white placeholder-[#64748b] focus:outline-none transition-colors"
+          />
+          {searchQuery && (
             <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
-                activeTab === tab.id
-                  ? 'bg-[#0df2c9] text-slate-950 shadow-sm font-black'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-[#1b273a]'
-              }`}
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#64748b] hover:text-white cursor-pointer"
             >
-              <span>{tab.label}</span>
-              <span
-                className={`text-[10px] px-1.5 py-0.2 rounded-md font-mono ${
-                  activeTab === tab.id ? 'bg-slate-950/20 text-slate-950 font-black' : 'bg-[#1b273a] text-slate-400'
-                }`}
-              >
-                {tab.count}
-              </span>
+              <X className="w-3.5 h-3.5" />
             </button>
-          ))}
+          )}
         </div>
 
-        {/* Search & Dropdown Filters */}
-        <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
-          <div className="sm:col-span-6 relative">
-            <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by topic, concept, equation, or citation..."
-              className="w-full bg-[#0b101b] border border-[#22334d] rounded-xl pl-10 pr-4 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-[#0df2c9]"
-            />
+        {/* Filters and Sorters Row */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-[#19243c]">
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Subject Filter */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-[#64748b]">Subject:</span>
+              <select
+                value={selectedSubjectId}
+                onChange={(e) => setSelectedSubjectId(e.target.value)}
+                className="px-3 py-1.5 bg-[#0a0f1d] border border-[#1f2d47] focus:border-[#0df2c9] rounded-xl text-xs font-medium text-white focus:outline-none cursor-pointer"
+              >
+                <option value="all">All Subjects ({questions.length})</option>
+                {subjects.map((s) => {
+                  const count = questions.filter(q => q.subjectId === s.id).length;
+                  return (
+                    <option key={s.id} value={s.id}>
+                      {s.name} ({count})
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+
+            {/* Difficulty Filter */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-[#64748b]">Difficulty:</span>
+              <select
+                value={selectedDifficulty}
+                onChange={(e) => setSelectedDifficulty(e.target.value)}
+                className="px-3 py-1.5 bg-[#0a0f1d] border border-[#1f2d47] focus:border-[#0df2c9] rounded-xl text-xs font-medium text-white focus:outline-none cursor-pointer"
+              >
+                <option value="all">All Difficulties</option>
+                <option value="easy">Easy</option>
+                <option value="medium">Medium</option>
+                <option value="hard">Hard</option>
+              </select>
+            </div>
           </div>
 
-          <div className="sm:col-span-3">
+          {/* Sort By Dropdown */}
+          <div className="flex items-center gap-2">
+            <ArrowUpDown className="w-3.5 h-3.5 text-[#64748b]" />
+            <span className="text-xs font-semibold text-[#64748b]">Sort:</span>
             <select
-              value={selectedDeck}
-              onChange={(e) => setSelectedDeck(e.target.value)}
-              className="w-full bg-[#0b101b] border border-[#22334d] rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-[#0df2c9]"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="px-3 py-1.5 bg-[#0a0f1d] border border-[#1f2d47] focus:border-[#0df2c9] rounded-xl text-xs font-medium text-white focus:outline-none cursor-pointer"
             >
-              <option value="all">All Academic Topics</option>
-              {decks.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.title}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="sm:col-span-3">
-            <select
-              value={selectedDifficulty}
-              onChange={(e) => setSelectedDifficulty(e.target.value)}
-              className="w-full bg-[#0b101b] border border-[#22334d] rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-[#0df2c9]"
-            >
-              <option value="all">All Difficulties</option>
-              <option value="Easy">Easy</option>
-              <option value="Medium">Medium</option>
-              <option value="Hard">Hard</option>
+              <option value="recent">Recently Added</option>
+              <option value="updated">Recently Updated</option>
+              <option value="alphabetical">Alphabetical (Topic/Title)</option>
+              <option value="oldest">Oldest First</option>
             </select>
           </div>
         </div>
       </div>
 
-      {/* Questions Grid & Realistic Empty States */}
-      {filteredQuestions.length === 0 ? (
-        <div className="bg-[#111927] border border-[#22334d] rounded-3xl p-12 text-center space-y-3">
-          <FileText className="w-12 h-12 text-slate-500 mx-auto" />
-          <h3 className="text-base font-bold text-white">
-            {activeTab === 'my' ? 'No questions created yet' : 'No questions found'}
-          </h3>
-          <p className="text-xs text-slate-400 max-w-sm mx-auto">
-            {activeTab === 'my'
-              ? 'Author your first long-form written question with attachments to earn +30 DP royalties!'
-              : 'Try adjusting your search query or filters to find questions in the academic repository.'}
-          </p>
-          <button
-            onClick={handleCreateNew}
-            className="px-5 py-2.5 bg-[#0df2c9] hover:bg-[#00e1ba] text-slate-950 font-black text-xs rounded-xl inline-flex items-center gap-1.5 mt-2 cursor-pointer shadow-md"
-          >
-            <Plus className="w-4 h-4 stroke-[3]" />
-            Author First Question
-          </button>
-        </div>
-      ) : (
+      {/* Questions Results List / Grid */}
+      {filteredQuestions.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filteredQuestions.map((q) => (
             <QuestionCard
               key={q.id}
               question={q}
-              onEdit={handleEdit}
-              onViewDetails={(question) => setViewingDetailQuestion(question)}
-              onDelete={handleDelete}
-              onSubmitReview={handleSubmitForReview}
-              onDemoApprove={handleApprove}
-              onApprove={handleApprove}
-              onReject={handleReject}
+              showSubjectBadge={true}
+              onEdit={(question) => navigate(`/subjects/${question.subjectId}/questions/${question.id}/edit`)}
+              onDelete={(question) => setDeleteTarget(question)}
             />
           ))}
         </div>
+      ) : questions.length > 0 ? (
+        <EmptyState
+          icon={Search}
+          title="No questions found"
+          description="No questions match your current search query and filters."
+          actionLabel="Clear Filters"
+          actionIcon={X}
+          onAction={() => {
+            setSearchQuery('');
+            setSelectedSubjectId('all');
+            setSelectedDifficulty('all');
+          }}
+        />
+      ) : (
+        <EmptyState
+          icon={FileText}
+          title="No questions in your repository"
+          description="Create your first subject and add long-form questions to build your library."
+          actionLabel={subjects.length > 0 ? '+ Add Question' : '+ Create Subject'}
+          actionIcon={Plus}
+          onAction={() => {
+            if (subjects.length > 0) {
+              navigate(`/subjects/${subjects[0].id}/questions/new`);
+            } else {
+              navigate('/subjects');
+            }
+          }}
+        />
       )}
 
-      {/* Authoring & Editing Modal */}
-      <QuestionModal
-        isOpen={isAuthorModalOpen}
-        onClose={() => setIsAuthorModalOpen(false)}
-        question={editingQuestion}
-      />
-
-      {/* Question Full Details Modal */}
-      <QuestionDetailModal
-        isOpen={Boolean(viewingDetailQuestion)}
-        onClose={() => setViewingDetailQuestion(null)}
-        question={viewingDetailQuestion}
-        onEdit={handleEdit}
+      {/* Confirm Deletion Dialog */}
+      <ConfirmDialog
+        isOpen={Boolean(deleteTarget)}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Question?"
+        message="Are you sure you want to delete this question? This action cannot be undone."
+        confirmLabel="Delete"
+        isDanger={true}
       />
     </div>
   );

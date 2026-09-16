@@ -90,7 +90,7 @@ export default function LoginPage() {
             Sign In to Kweshun
           </h2>
           <p className="text-xs text-[var(--text-secondary)]">
-            Access your academic decks, active battles, and Distinction ledger.
+            Access your subjects, curated questions, formulas, and diagrams.
           </p>
         </div>
 
@@ -119,7 +119,7 @@ export default function LoginPage() {
                       {demoUser.name}
                     </div>
                     <div className="text-[10px] text-[var(--text-muted)] font-mono truncate">
-                      {demoUser.tier || 'Scholar'} • {demoUser.dp} DP
+                      {demoUser.title || demoUser.tier || 'Scholar'}
                     </div>
                   </div>
                 </div>

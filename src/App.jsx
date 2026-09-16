@@ -1,30 +1,21 @@
-import React, { useState } from 'react';
+﻿import React from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import AppShell from './components/layout/AppShell';
 import LandingPage from './pages/LandingPage';
 import OnboardingPage from './pages/OnboardingPage';
 import HomePage from './pages/HomePage';
+import SubjectsPage from './pages/SubjectsPage';
+import SubjectDetailPage from './pages/SubjectDetailPage';
+import QuestionEditorPage from './pages/QuestionEditorPage';
+import QuestionDetailPage from './pages/QuestionDetailPage';
 import QuestionsPage from './pages/QuestionsPage';
-import BattlesPage from './pages/BattlesPage';
-import DecksPage from './pages/DecksPage';
-import FriendsPage from './pages/FriendsPage';
-import LeaderboardPage from './pages/LeaderboardPage';
-import NotificationsPage from './pages/NotificationsPage';
 import ProfilePage from './pages/ProfilePage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import NotFoundPage from './pages/NotFoundPage';
-
-import BattlePlayModal from './components/battles/BattlePlayModal';
-import LightningArenaModal from './components/battles/LightningArenaModal';
-import QuickMatchModal from './components/battles/QuickMatchModal';
-import BattleResultModal from './components/battles/BattleResultModal';
-import ChallengeModal from './components/battles/ChallengeModal';
-import DeckPracticeModal from './components/decks/DeckPracticeModal';
 import ToastContainer from './components/common/ToastContainer';
 
 import { useAuth } from './context/AuthContext';
-import { useGame } from './context/GameContext';
 
 // Protected Route Wrapper for Prototype App
 function ProtectedRoute({ children, isAuthenticated, isRegistered }) {
@@ -36,88 +27,18 @@ function ProtectedRoute({ children, isAuthenticated, isRegistered }) {
 
 export default function App() {
   const { isAuthenticated, isRegistered } = useAuth();
-  const { 
-    questions, 
-    decks, 
-    battles, 
-    practicingDeck, 
-    setPracticingDeck,
-    activeBattleId,
-    setActiveBattleId,
-    activeBattleData,
-    setActiveBattleData
-  } = useGame();
-
-  // Global Modals state
-  const [isLightningOpen, setIsLightningOpen] = useState(false);
-  const [isQuickMatchOpen, setIsQuickMatchOpen] = useState(false);
-  const [battleResultData, setBattleResultData] = useState(null);
-  const [isChallengeOpen, setIsChallengeOpen] = useState(false);
-
-  // Trigger Quick Match Matchmaking
-  const handleOpenQuickMatch = () => {
-    setIsQuickMatchOpen(true);
-  };
-
-  // Trigger Direct Battle Launch
-  const handleLaunchBattle = (deckId = 'deck_1', battle = null) => {
-    let battleQuestions = questions.filter((q) => !deckId || q.deckId === deckId);
-    if (battleQuestions.length < 5) {
-      battleQuestions = questions.slice(0, 5);
-    } else {
-      battleQuestions = battleQuestions.slice(0, 5);
-    }
-
-    const matchedDeck = decks.find((d) => d.id === deckId) || decks[0];
-
-    const newBattle = {
-      id: battle?.id || `btl_${Date.now()}`,
-      deckId: matchedDeck ? matchedDeck.id : 'deck_1',
-      deckName: matchedDeck ? matchedDeck.title : 'Academic Duel',
-      subject: battle?.subject || matchedDeck?.title || 'Academic Face-Off',
-      opponentName: battle?.opponentName || 'Abram Mango',
-      opponentAvatar: battle?.opponentAvatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-      opponentRank: battle?.opponentRank || 'Master Duelist',
-      opponentLevel: battle?.opponentLevel || 12,
-      accuracy: battle?.accuracy || 70,
-      dpReward: battle?.dpReward || 120,
-      dpLoss: battle?.dpLoss || 40,
-      timeRemainingSeconds: battle?.timeRemainingSeconds || 15,
-      questions: battleQuestions
-    };
-
-    setActiveBattleId(newBattle.id);
-    setActiveBattleData(newBattle);
-  };
-
-  const handleBattleComplete = (result) => {
-    console.log('Battle concluded:', result);
-  };
-
-  const handleStartPractice = (deckOrId) => {
-    if (typeof deckOrId === 'string') {
-      const found = decks.find((d) => d.id === deckOrId) || decks[0];
-      setPracticingDeck(found);
-    } else {
-      setPracticingDeck(deckOrId);
-    }
-  };
 
   return (
     <Router>
       <div className="min-h-screen bg-[#090d16] text-[#f8fafc] font-sans antialiased selection:bg-[#0df2c9]/30 selection:text-[#0df2c9]">
         <Routes>
-          {/* Public Landing & Auth Routes */}
+          {/* Public Landing & Authentication */}
           <Route
             path="/"
             element={
               isAuthenticated && isRegistered ? (
                 <AppShell>
-                  <HomePage
-                    onOpenBattle={handleOpenQuickMatch}
-                    onOpenLightning={() => setIsLightningOpen(true)}
-                    onStartPractice={handleStartPractice}
-                  />
+                  <HomePage />
                 </AppShell>
               ) : (
                 <LandingPage />
@@ -130,32 +51,59 @@ export default function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/onboarding" element={<OnboardingPage />} />
 
-          {/* Protected Main Application Routes */}
+          {/* Protected Main Repository Routes */}
           <Route
             path="/home"
             element={
               <ProtectedRoute isAuthenticated={isAuthenticated} isRegistered={isRegistered}>
-                <HomePage
-                  onOpenBattle={handleOpenQuickMatch}
-                  onOpenLightning={() => setIsLightningOpen(true)}
-                  onStartPractice={handleStartPractice}
-                />
+                <HomePage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Subjects Routes */}
+          <Route
+            path="/subjects"
+            element={
+              <ProtectedRoute isAuthenticated={isAuthenticated} isRegistered={isRegistered}>
+                <SubjectsPage />
               </ProtectedRoute>
             }
           />
           <Route
-            path="/arena/lightning"
+            path="/subjects/:subjectId"
             element={
               <ProtectedRoute isAuthenticated={isAuthenticated} isRegistered={isRegistered}>
-                <HomePage
-                  onOpenBattle={handleOpenQuickMatch}
-                  onOpenLightning={() => setIsLightningOpen(true)}
-                  onStartPractice={handleStartPractice}
-                  autoOpenLightning={true}
-                />
+                <SubjectDetailPage />
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/subjects/:subjectId/questions/new"
+            element={
+              <ProtectedRoute isAuthenticated={isAuthenticated} isRegistered={isRegistered}>
+                <QuestionEditorPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/subjects/:subjectId/questions/:questionId"
+            element={
+              <ProtectedRoute isAuthenticated={isAuthenticated} isRegistered={isRegistered}>
+                <QuestionDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/subjects/:subjectId/questions/:questionId/edit"
+            element={
+              <ProtectedRoute isAuthenticated={isAuthenticated} isRegistered={isRegistered}>
+                <QuestionEditorPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Questions Routes */}
           <Route
             path="/questions"
             element={
@@ -168,148 +116,28 @@ export default function App() {
             path="/questions/new"
             element={
               <ProtectedRoute isAuthenticated={isAuthenticated} isRegistered={isRegistered}>
-                <QuestionsPage />
+                <QuestionEditorPage />
               </ProtectedRoute>
             }
           />
           <Route
-            path="/questions/:id"
+            path="/questions/:questionId"
             element={
               <ProtectedRoute isAuthenticated={isAuthenticated} isRegistered={isRegistered}>
-                <QuestionsPage />
+                <QuestionDetailPage />
               </ProtectedRoute>
             }
           />
           <Route
-            path="/questions/:id/analytics"
+            path="/questions/:questionId/edit"
             element={
               <ProtectedRoute isAuthenticated={isAuthenticated} isRegistered={isRegistered}>
-                <QuestionsPage />
+                <QuestionEditorPage />
               </ProtectedRoute>
             }
           />
-          <Route
-            path="/questions/*"
-            element={
-              <ProtectedRoute isAuthenticated={isAuthenticated} isRegistered={isRegistered}>
-                <QuestionsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/battles"
-            element={
-              <ProtectedRoute isAuthenticated={isAuthenticated} isRegistered={isRegistered}>
-                <BattlesPage
-                  onStartBattle={handleOpenQuickMatch}
-                  onStartLightning={() => setIsLightningOpen(true)}
-                />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/battles/:id"
-            element={
-              <ProtectedRoute isAuthenticated={isAuthenticated} isRegistered={isRegistered}>
-                <BattlesPage
-                  onStartBattle={handleOpenQuickMatch}
-                  onStartLightning={() => setIsLightningOpen(true)}
-                />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/battles/:id/play"
-            element={
-              <ProtectedRoute isAuthenticated={isAuthenticated} isRegistered={isRegistered}>
-                <BattlesPage
-                  onStartBattle={handleOpenQuickMatch}
-                  onStartLightning={() => setIsLightningOpen(true)}
-                />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/battles/:id/result"
-            element={
-              <ProtectedRoute isAuthenticated={isAuthenticated} isRegistered={isRegistered}>
-                <BattlesPage
-                  onStartBattle={handleOpenQuickMatch}
-                  onStartLightning={() => setIsLightningOpen(true)}
-                />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/battles/*"
-            element={
-              <ProtectedRoute isAuthenticated={isAuthenticated} isRegistered={isRegistered}>
-                <BattlesPage
-                  onStartBattle={handleOpenQuickMatch}
-                  onStartLightning={() => setIsLightningOpen(true)}
-                />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/decks"
-            element={
-              <ProtectedRoute isAuthenticated={isAuthenticated} isRegistered={isRegistered}>
-                <DecksPage
-                  onStartPractice={handleStartPractice}
-                  onStartBattle={handleLaunchBattle}
-                />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/decks/:deckId"
-            element={
-              <ProtectedRoute isAuthenticated={isAuthenticated} isRegistered={isRegistered}>
-                <DecksPage
-                  onStartPractice={handleStartPractice}
-                  onStartBattle={handleLaunchBattle}
-                />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/practice/:deckId"
-            element={
-              <ProtectedRoute isAuthenticated={isAuthenticated} isRegistered={isRegistered}>
-                <DecksPage
-                  onStartPractice={handleStartPractice}
-                  onStartBattle={handleLaunchBattle}
-                />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/friends"
-            element={
-              <ProtectedRoute isAuthenticated={isAuthenticated} isRegistered={isRegistered}>
-                <FriendsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/leaderboard"
-            element={
-              <ProtectedRoute isAuthenticated={isAuthenticated} isRegistered={isRegistered}>
-                <LeaderboardPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/notifications"
-            element={
-              <ProtectedRoute isAuthenticated={isAuthenticated} isRegistered={isRegistered}>
-                <NotificationsPage
-                  onStartBattle={handleLaunchBattle}
-                />
-              </ProtectedRoute>
-            }
-          />
+
+          {/* Profile Route */}
           <Route
             path="/profile"
             element={
@@ -326,53 +154,21 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+
+          {/* Graceful Fallbacks for Legacy Removed Routes */}
+          <Route path="/battles/*" element={<Navigate to="/" replace />} />
+          <Route path="/decks/*" element={<Navigate to="/subjects" replace />} />
+          <Route path="/practice/*" element={<Navigate to="/subjects" replace />} />
+          <Route path="/leaderboard/*" element={<Navigate to="/" replace />} />
+          <Route path="/friends/*" element={<Navigate to="/" replace />} />
+          <Route path="/notifications/*" element={<Navigate to="/" replace />} />
+          <Route path="/arena/*" element={<Navigate to="/" replace />} />
+
+          {/* 404 Catch-All */}
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
 
-        {/* Global Modals Stack */}
-        <QuickMatchModal
-          isOpen={isQuickMatchOpen}
-          onClose={() => setIsQuickMatchOpen(false)}
-          onLaunchBattle={handleLaunchBattle}
-        />
-
-        <BattlePlayModal
-          isOpen={Boolean(activeBattleData)}
-          onClose={() => {
-            setActiveBattleData(null);
-            setActiveBattleId(null);
-          }}
-          battle={activeBattleData}
-          onComplete={handleBattleComplete}
-        />
-
-        <LightningArenaModal
-          isOpen={isLightningOpen}
-          onClose={() => setIsLightningOpen(false)}
-        />
-
-        <BattleResultModal
-          isOpen={Boolean(battleResultData)}
-          onClose={() => setBattleResultData(null)}
-          result={battleResultData}
-          onRematch={() => {
-            setBattleResultData(null);
-            handleLaunchBattle(battleResultData?.deckId);
-          }}
-        />
-
-        <ChallengeModal
-          isOpen={isChallengeOpen}
-          onClose={() => setIsChallengeOpen(false)}
-        />
-
-        <DeckPracticeModal
-          isOpen={Boolean(practicingDeck)}
-          onClose={() => setPracticingDeck(null)}
-          deck={practicingDeck}
-        />
-
-        {/* Global Reactive Toasts */}
+        {/* Global Reactive Toast Notifications */}
         <ToastContainer />
       </div>
     </Router>

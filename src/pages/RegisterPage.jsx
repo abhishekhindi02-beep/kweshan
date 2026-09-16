@@ -118,7 +118,7 @@ export default function RegisterPage() {
             Create Your Profile
           </h2>
           <p className="text-xs text-[var(--text-secondary)]">
-            Join the academic arena, challenge AI scholars, and climb the leaderboard.
+            Organize subjects, create long-form questions, and store equations and diagrams.
           </p>
         </div>
 

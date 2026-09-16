@@ -11,11 +11,33 @@ const STOP_WORDS = new Set([
   'much', 'like', 'good', 'think', 'know', 'see', 'just', 'also'
 ]);
 
-function tokenize(text) {
-  if (!text) return [];
+export function normalizeMathText(text) {
+  if (!text) return '';
   return text
     .toLowerCase()
-    .replace(/[^a-z0-9\sΣθλαβγΔ\+\-\*\/\=\^\(\)\_\.\√]/g, ' ')
+    .replace(/[·•×]/g, '*')
+    .replace(/[Σ∑]/g, 'sigma ')
+    .replace(/\\sigma/gi, 'sigma ')
+    .replace(/\\cdot/gi, '*')
+    .replace(/\\times/gi, '*')
+    .replace(/\\sqrt/gi, 'sqrt')
+    .replace(/√/g, 'sqrt')
+    .replace(/²/g, '^2')
+    .replace(/³/g, '^3')
+    .replace(/⁴/g, '^4')
+    .replace(/₁/g, '1')
+    .replace(/₂/g, '2')
+    .replace(/ᵢ/g, 'i')
+    .replace(/₀/g, '0')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function tokenize(text) {
+  if (!text) return [];
+  const normalized = normalizeMathText(text);
+  return normalized
+    .replace(/[^a-z0-9\sθλαβγΔ\+\-\*\/\=\^\(\)\_\.]/g, ' ')
     .split(/\s+/)
     .filter((w) => w.length > 1 && !STOP_WORDS.has(w));
 }
@@ -24,16 +46,73 @@ function tokenize(text) {
 const KNOWN_RUBRICS = {
   newton_second_law: {
     expectedConcepts: [
-      { key: 'newton_law', label: "Newton's second law (F = ma)", regex: /(newton|second law|f\s*=\s*m\s*\*?\s*a|f_net|net force)/i },
-      { key: 'cartesian_decomp', label: 'Cartesian x & y component decomposition', regex: /(cartesian|component|x-axis|y-axis|orthogonal|resolve|resolving|perpendicular)/i },
-      { key: 'trig_resolution', label: 'Trigonometric force resolution (cos θ / sin θ)', regex: /(cos|sin|angle|theta|θ|projection)/i },
-      { key: 'force_summation', label: 'Sum of forces (ΣFx and ΣFy)', regex: /(sigma\s*f|sum of force|∑f|σf|fx|fy|f_x|f_y|fnet_x|fnet_y)/i },
-      { key: 'resultant_accel', label: 'Resultant net acceleration magnitude synthesis', regex: /(resultant|pythagor|magnitude|net accel|total accel|root|sqrt|√)/i }
+      {
+        key: 'newton_law',
+        label: "Newton's second law (F = ma or ΣF = ma)",
+        check: (norm, raw) => {
+          if (/(newton|second\s*law|f(_?net)?\s*=\s*m\s*\*?\s*a|net\s*force|sigma\s*f\s*=\s*m)/i.test(norm)) return true;
+          // Equivalence: Component forms ΣFx = m·ax and ΣFy = m·ay express Newton's second law
+          const hasFx = /(sigma\s*)?f_?x\s*=\s*m\s*\*?\s*a_?x|a_?x\s*=\s*(sigma\s*)?f_?x\s*\/\s*m/i.test(norm);
+          const hasFy = /(sigma\s*)?f_?y\s*=\s*m\s*\*?\s*a_?y|a_?y\s*=\s*(sigma\s*)?f_?y\s*\/\s*m/i.test(norm);
+          return hasFx && hasFy;
+        }
+      },
+      {
+        key: 'cartesian_decomp',
+        label: 'Cartesian x & y force resolution',
+        check: (norm, raw) => {
+          if (/(cartesian|component|orthogonal|resolv|x-axis|y-axis)/i.test(norm)) return true;
+          if (/(cos|sin|theta|θ|projection|angle)/i.test(norm)) return true;
+          const hasFx = /(sigma\s*)?f_?x/i.test(norm);
+          const hasFy = /(sigma\s*)?f_?y/i.test(norm);
+          return hasFx && hasFy;
+        }
+      },
+      {
+        key: 'force_summation',
+        label: 'Sum of Cartesian forces (ΣFx and ΣFy)',
+        check: (norm, raw) => {
+          return /(sigma\s*f|sum\s*of\s*force|∑f|σf|f_?x|f_?y|fnet_?x|fnet_?y)/i.test(norm);
+        }
+      },
+      {
+        key: 'resultant_accel',
+        label: 'Resultant net acceleration synthesis (a = √(ax² + ay²))',
+        check: (norm, raw) => {
+          if (/(resultant|pythagor|net\s*accel|total\s*accel)/i.test(norm)) return true;
+          if (/a(_?net)?\s*=\s*sqrt/i.test(norm)) return true;
+          if (/sqrt\s*\(\s*\(?a_?x\^?2\s*\+\s*a_?y\^?2/i.test(norm)) return true;
+          if (/sqrt\s*\(\s*\(?\s*\(?(sigma\s*)?f_?x/i.test(norm)) return true;
+          return false;
+        }
+      }
     ],
     requiredFormulas: [
-      { key: 'fx_formula', label: 'ΣFx = m·ax (or ax = ΣFx/m)', regex: /((\Sigma|∑|σ)?\s*f_?x\s*=\s*m\s*\*?\s*a_?x|a_?x\s*=\s*(\Sigma|∑|σ)?\s*f_?x\s*\/\s*m|f_?x\s*=\s*f\s*\*?\s*cos)/i },
-      { key: 'fy_formula', label: 'ΣFy = m·ay (or ay = ΣFy/m)', regex: /((\Sigma|∑|σ)?\s*f_?y\s*=\s*m\s*\*?\s*a_?y|a_?y\s*=\s*(\Sigma|∑|σ)?\s*f_?y\s*\/\s*m|f_?y\s*=\s*f\s*\*?\s*sin)/i },
-      { key: 'a_resultant_formula', label: 'a = √(ax² + ay²)', regex: /(a\s*=\s*(sqrt|√|\()|a_?net\s*=\s*(sqrt|√|\()|\(?a_?x\^?2?\s*\+\s*a_?y\^?2?\)?|√\(|sqrt\()/i }
+      {
+        key: 'fx_formula',
+        label: 'ΣFx = m·ax (or ax = ΣFx/m)',
+        check: (norm) => {
+          return /(sigma\s*)?f_?x\s*=\s*m\s*\*?\s*a_?x|a_?x\s*=\s*(sigma\s*)?f_?x\s*\/\s*m|(sigma\s*)?f_?x\s*=\s*(sigma\s*)?f(_?i)?\s*\*?\s*cos/i.test(norm);
+        }
+      },
+      {
+        key: 'fy_formula',
+        label: 'ΣFy = m·ay (or ay = ΣFy/m)',
+        check: (norm) => {
+          return /(sigma\s*)?f_?y\s*=\s*m\s*\*?\s*a_?y|a_?y\s*=\s*(sigma\s*)?f_?y\s*\/\s*m|(sigma\s*)?f_?y\s*=\s*(sigma\s*)?f(_?i)?\s*\*?\s*sin/i.test(norm);
+        }
+      },
+      {
+        key: 'a_resultant_formula',
+        label: 'a = √(ax² + ay²) or a = √((ΣFx/m)² + (ΣFy/m)²)',
+        check: (norm) => {
+          if (/a(_?net)?\s*=\s*sqrt\s*\(/i.test(norm)) return true;
+          if (/sqrt\s*\(\s*\(?a_?x\^?2\s*\+\s*a_?y\^?2/i.test(norm)) return true;
+          if (/sqrt\s*\(\s*\(?\s*\(?(sigma\s*)?f_?x/i.test(norm)) return true;
+          if (/\(?a_?x\^?2\s*\+\s*a_?y\^?2\)?\^?\(?(0\.5|1\/2)\)?/i.test(norm)) return true;
+          return false;
+        }
+      }
     ]
   }
 };
@@ -78,16 +157,17 @@ export function extractKeyConcepts(question) {
 export function evaluateWrittenAnswer(userAnswer, question) {
   const answer = (userAnswer || '').trim();
   const cleanAnswer = answer.toLowerCase();
+  const normAnswer = normalizeMathText(answer);
   const prompt = (question?.prompt || question?.text || '').toLowerCase();
 
-  // 1. Check if empty or obviously insufficient (< 10 chars, < 3 words)
-  if (!cleanAnswer || cleanAnswer.length < 10 || cleanAnswer.split(/\s+/).length < 3) {
+  // 1. Check if empty or obviously insufficient (< 8 chars, < 2 tokens)
+  if (!cleanAnswer || cleanAnswer.length < 8 || tokenize(cleanAnswer).length < 2) {
     return {
       isCorrect: false,
       isPartial: false,
       scorePercent: 0,
       awardedDP: 0,
-      gradeLabel: 'Incorrect / Needs Improvement (0 DP)',
+      gradeLabel: 'INCORRECT / NEEDS IMPROVEMENT (0 DP)',
       status: 'incorrect',
       matchedConcepts: [],
       missingConcepts: extractKeyConcepts(question).slice(0, 5),
@@ -114,7 +194,7 @@ export function evaluateWrittenAnswer(userAnswer, question) {
 
     // Evaluate concepts (Max 40 pts)
     rubric.expectedConcepts.forEach((concept) => {
-      if (concept.regex.test(cleanAnswer)) {
+      if (concept.check(normAnswer, cleanAnswer)) {
         matchedConcepts.push(concept.label);
         conceptScore += (40 / rubric.expectedConcepts.length);
       } else {
@@ -124,7 +204,7 @@ export function evaluateWrittenAnswer(userAnswer, question) {
 
     // Evaluate formulas (Max 40 pts)
     rubric.requiredFormulas.forEach((formula) => {
-      if (formula.regex.test(cleanAnswer)) {
+      if (formula.check(normAnswer, cleanAnswer)) {
         matchedFormulas.push(formula.label);
         formulaScore += (40 / rubric.requiredFormulas.length);
       } else {
@@ -132,21 +212,31 @@ export function evaluateWrittenAnswer(userAnswer, question) {
       }
     });
 
-    // Evaluate explanation depth and coherence (Max 20 pts)
+    // Evaluate mathematical rigor and explanation depth (Max 20 pts)
+    const hasAllFormulas = matchedFormulas.length === rubric.requiredFormulas.length;
+    const hasAllConcepts = matchedConcepts.length === rubric.expectedConcepts.length;
     const wordCount = cleanAnswer.split(/\s+/).length;
-    if (wordCount >= 30) explanationScore = 20;
-    else if (wordCount >= 18) explanationScore = 14;
-    else if (wordCount >= 10) explanationScore = 8;
-    else explanationScore = 2;
+
+    if (hasAllFormulas && hasAllConcepts) {
+      explanationScore = 20; // Full credit for complete, exact derivation
+    } else if (wordCount >= 25) {
+      explanationScore = 20;
+    } else if (wordCount >= 14) {
+      explanationScore = 14;
+    } else if (wordCount >= 8) {
+      explanationScore = 8;
+    } else {
+      explanationScore = 2;
+    }
 
   } else {
     // General Rubric Evaluation
     const expected = extractKeyConcepts(question);
-    const userTokens = new Set(tokenize(cleanAnswer));
+    const userTokens = new Set(tokenize(normAnswer));
 
     expected.forEach((c) => {
-      const cClean = c.toLowerCase();
-      if (cleanAnswer.includes(cClean) || userTokens.has(cClean)) {
+      const cClean = normalizeMathText(c);
+      if (normAnswer.includes(cClean) || userTokens.has(cClean)) {
         matchedConcepts.push(c);
       } else {
         missingConcepts.push(c);
@@ -157,7 +247,7 @@ export function evaluateWrittenAnswer(userAnswer, question) {
     conceptScore = Math.round(conceptRatio * 45);
 
     // Formula / Math check
-    const hasMath = /[\=\+\-\*\/\^\√\Σ]/.test(cleanAnswer);
+    const hasMath = /[\=\+\-\*\/\^\√\Σ]/.test(answer) || /sigma|sqrt|\^/.test(normAnswer);
     const hasEquationWords = /(equation|formula|equals|yields|derive|calculate)/i.test(cleanAnswer);
     formulaScore = (hasMath ? 25 : 0) + (hasEquationWords ? 10 : 0);
 
@@ -180,10 +270,10 @@ export function evaluateWrittenAnswer(userAnswer, question) {
   let isPartial = false;
   let awardedDP = 0;
   let status = 'incorrect';
-  let gradeLabel = 'Incorrect / Needs Improvement (0 DP)';
+  let gradeLabel = 'INCORRECT / NEEDS IMPROVEMENT (0 DP)';
   let feedback = '';
 
-  if (totalScore >= 80) {
+  if (totalScore >= 75) {
     isCorrect = true;
     isPartial = false;
     awardedDP = 10;
@@ -237,7 +327,9 @@ export function evaluateWrittenAnswer(userAnswer, question) {
 
 export default {
   evaluateWrittenAnswer,
-  extractKeyConcepts
+  extractKeyConcepts,
+  normalizeMathText
 };
+
 
 

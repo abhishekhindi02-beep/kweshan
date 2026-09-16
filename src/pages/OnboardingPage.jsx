@@ -82,7 +82,7 @@ export default function OnboardingPage() {
               What would you like to study?
             </h2>
             <p className="text-xs sm:text-sm text-[var(--text-secondary)] max-w-md mx-auto">
-              Select the topics you want to practice and duel in. You can change your focus disciplines at any time.
+              Select the initial subjects to add to your repository. You can add or create custom subjects anytime.
             </p>
           </div>
 
@@ -138,35 +138,35 @@ export default function OnboardingPage() {
         <div className="w-full max-w-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-3xl p-6 sm:p-10 text-center space-y-8 shadow-2xl relative animate-fadeIn">
           <div className="w-18 h-18 mx-auto rounded-3xl bg-gradient-to-tr from-[#0df2c9] to-[#8b5cf6] p-[2px] shadow-xl shadow-[#0df2c9]/25 flex items-center justify-center">
             <div className="w-full h-full bg-[#090d16] rounded-[22px] flex items-center justify-center">
-              <Trophy className="w-9 h-9 text-[#0df2c9]" />
+              <BookOpen className="w-9 h-9 text-[#0df2c9]" />
             </div>
           </div>
 
           <div className="space-y-2">
             <span className="text-xs font-mono font-bold uppercase tracking-widest text-[#0df2c9]">
-              PROFILE READY
+              REPOSITORY INITIALIZED
             </span>
             <h2 className="text-2xl sm:text-3xl font-black text-[var(--text-primary)] tracking-tight">
               WELCOME TO KWESHUN, {effectiveUser.name.toUpperCase()}
             </h2>
             <p className="text-xs sm:text-sm text-[var(--text-secondary)] max-w-md mx-auto">
-              You are ready to start your academic journey. Practice questions, battle AI opponents, and climb the leaderboard.
+              Your academic question repository is ready. Create custom subjects, author long-form questions, and attach equations and figures.
             </p>
           </div>
 
           {/* User Starting Metrics */}
           <div className="grid grid-cols-3 gap-3">
             <div className="bg-[var(--bg-card)] border border-[var(--border-card)] p-3.5 rounded-2xl">
-              <div className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Starting Tier</div>
-              <div className="text-base font-black text-[#0df2c9] mt-0.5">{effectiveUser.tier || 'Scholar'}</div>
+              <div className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Status</div>
+              <div className="text-base font-black text-[#0df2c9] mt-0.5">Active</div>
             </div>
             <div className="bg-[var(--bg-card)] border border-[var(--border-card)] p-3.5 rounded-2xl">
-              <div className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Initial DP</div>
-              <div className="text-base font-black text-[var(--text-primary)] font-mono mt-0.5">0 DP</div>
+              <div className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Repository</div>
+              <div className="text-base font-black text-[var(--text-primary)] font-mono mt-0.5">Isolated</div>
             </div>
             <div className="bg-[var(--bg-card)] border border-[var(--border-card)] p-3.5 rounded-2xl">
-              <div className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Streak</div>
-              <div className="text-base font-black text-amber-400 font-mono mt-0.5">0 Days</div>
+              <div className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Subjects</div>
+              <div className="text-base font-black text-amber-400 font-mono mt-0.5">{selectedSubjects.length} Ready</div>
             </div>
           </div>
 
